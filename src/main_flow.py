@@ -283,5 +283,6 @@ class SignalFluxWorkflow:
 
 if __name__ == "__main__":
     workflow = SignalFluxWorkflow()
-    workflow.run(query='帮我分析一下近期热点')
+    # workflow.run(query='帮我分析一下近期热点')
+    workflow.run()
     # workflow.run(sources=['social'], wide=5, depth='auto')

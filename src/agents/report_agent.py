@@ -445,8 +445,6 @@ class ReportAgent:
 
 {quick_scan}
 
-## 核心观点摘要
-
 {summary}
 
 {"\n\n".join(cleaned_sections)}

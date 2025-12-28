@@ -17,6 +17,8 @@ dependencies = [
     "openai>=2.14.0",
     "pandas>=2.3.3",
     "pycountry>=24.6.1",
+    "pyecharts>=2.0.9",
     "rank-bm25>=0.2.2",
+    "torch>=2.9.1",
     "transformers>=4.57.3",
 ]
