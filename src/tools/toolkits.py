@@ -236,6 +236,26 @@ class StockToolkit(Toolkit):
         Returns:
             匹配的股票列表，包含代码和名称。
         """
+        q = (query or "").strip()
+        # Guardrails: prevent overly generic queries that tend to return arbitrary "...股份" matches.
+        generic_terms = {
+            "股份",
+            "有限公司",
+            "概念股",
+            "受益股",
+            "龙头",
+            "标的",
+            "相关股票",
+            "合作概念股",
+        }
+        if not q:
+            return "查询为空，无法搜索股票"
+        if q in generic_terms:
+            return f"查询过于泛化（{q}），为避免误匹配已拒绝。请提供更具体的公司名或6位代码。"
+        # If it's not a numeric code, require at least 2 non-space chars.
+        if not any(ch.isdigit() for ch in q) and len(q.replace(" ", "")) < 2:
+            return "查询过短，无法搜索股票。请提供更具体的公司名或6位代码。"
+
         results = self._stock_tools.search_ticker(query)
         
         if not results:

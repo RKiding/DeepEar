@@ -417,6 +417,26 @@ class DatabaseManager:
         """, (wild, wild, limit))
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_stock_by_code(self, code: str) -> Optional[Dict[str, str]]:
+        """精确按代码获取股票信息。
+
+        Args:
+            code: 股票代码（A股6位 / 港股5位），必须为纯数字字符串。
+
+        Returns:
+            dict: {"code": str, "name": str} 或 None。
+        """
+        if not code:
+            return None
+        clean = "".join([c for c in str(code).strip() if c.isdigit()])
+        if not clean:
+            return None
+
+        cursor = self.conn.cursor()
+        cursor.execute("SELECT code, name FROM stock_list WHERE code = ? LIMIT 1", (clean,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
     def save_stock_prices(self, ticker: str, df: pd.DataFrame):
         """保存股价历史数据"""
         if df.empty:
