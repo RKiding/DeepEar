@@ -1,0 +1,161 @@
+.signal-card {
+    background: linear-gradient(135deg, #1e2530, #1a1d23);
+    border: 1px solid #2d3139;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+}
+
+.signal-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e1e4e8;
+    margin: 0;
+    flex: 1;
+}
+
+.signal-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.tag {
+    padding: 2px 8px;
+    font-size: 11px;
+    background: #2d3139;
+    color: #8b949e;
+    border-radius: 10px;
+}
+
+.signal-summary {
+    font-size: 14px;
+    color: #8b949e;
+    line-height: 1.6;
+    margin: 0 0 16px 0;
+}
+
+.signal-metrics {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.metric {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 12px;
+    background: #21252b;
+    border-radius: 8px;
+    min-width: 60px;
+}
+
+.metric-label {
+    font-size: 11px;
+    color: #6b7280;
+    margin-bottom: 4px;
+}
+
+.metric-value {
+    font-size: 16px;
+    font-weight: 600;
+    color: #e1e4e8;
+}
+
+.metric-value.positive {
+    color: #81c784;
+}
+
+.metric-value.negative {
+    color: #e57373;
+}
+
+.metric-value.neutral {
+    color: #8b949e;
+}
+
+.signal-tickers {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.ticker-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #1e3a5f, #1e2e4a);
+    border: 1px solid #4fc3f7;
+    border-radius: 20px;
+}
+
+.ticker-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #4fc3f7;
+}
+
+.ticker-code {
+    font-size: 11px;
+    color: #8b949e;
+}
+
+.transmission-chain {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 12px;
+    background: #21252b;
+    border-radius: 8px;
+}
+
+.chain-node {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.chain-arrow {
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.node-badge {
+    padding: 4px 10px;
+    font-size: 12px;
+    border-radius: 4px;
+    background: #2d3139;
+    color: #e1e4e8;
+}
+
+.node-badge.利好 {
+    background: #1e3a2e;
+    color: #81c784;
+}
+
+.node-badge.利空 {
+    background: #3f1e1e;
+    color: #e57373;
+}
+
+.node-badge.事件 {
+    background: #1e3a5f;
+    color: #4fc3f7;
+}
+
+.node-badge.中性 {
+    background: #2d3139;
+    color: #8b949e;
+}

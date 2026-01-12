@@ -28,4 +28,6 @@ dependencies = [
     "sentence-transformers>=5.2.0",
     "torch>=2.9.1",
     "transformers>=4.57.3",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
 ]

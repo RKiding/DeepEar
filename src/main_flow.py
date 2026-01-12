@@ -281,7 +281,7 @@ class SignalFluxWorkflow:
                 for q in search_queries[:2]: # 限制查询数，避免太慢
                     # Consider using 'baidu' for Chinese queries if 'ddg' is unstable
                     # enrich=True is default, so we get full content
-                    results = self.search_tools.search_list(q, engine="baidu", max_results=5, enrich=True)
+                    results = self.search_tools.search_list(q, max_results=5, enrich=True)  # 使用默认引擎 (jina if configured)
                     for r in results:
                         # 转换为标准信号格式 (search_tools now returns standard keys including id, rank, etc)
                         search_signals.append({
