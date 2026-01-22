@@ -1,12 +1,79 @@
+/* KLineChart - Fintech Design */
 .kline-chart {
-    background: #1a1d23;
-    border: 1px solid #2d3139;
+    background: var(--bg-card, #1E293B);
+    border: 1px solid var(--border-primary, #334155);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kline-chart:hover {
+    border-color: rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.chart-header-html {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2px;
+}
+
+.stock-title {
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.stock-title:hover {
+    opacity: 0.8;
+}
+
+.stock-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #e1e4e8;
+}
+
+.stock-code {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 1px;
+}
+
+.prediction-info {
+    font-size: 11px;
+    color: #81c784;
+    text-align: right;
+    max-width: 60%;
 }
 
 .chart-container {
+    height: 320px;
     width: 100%;
-    height: 350px;
+}
+
+.prediction-logic {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px dashed var(--border-primary, #334155);
+}
+
+.logic-title {
+    font-size: 11px;
+    font-weight: 500;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.logic-content {
+    font-size: 13px;
+    line-height: 1.5;
+    color: #e2e8f0;
 }
