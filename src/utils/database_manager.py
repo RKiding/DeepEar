@@ -8,7 +8,7 @@ from loguru import logger
 
 class DatabaseManager:
     """
-    SignalFlux 数据库管理器 - 负责存储热点数据、搜索缓存和股价数据
+    AlphaEar 数据库管理器 - 负责存储热点数据、搜索缓存和股价数据
     使用 SQLite 进行持久化存储
     """
     

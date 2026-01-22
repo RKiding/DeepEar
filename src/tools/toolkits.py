@@ -1,5 +1,5 @@
 """
-SignalFlux 工具包层 - Agno Toolkit 适配器
+AlphaEar 工具包层 - Agno Toolkit 适配器
 复用 utils 中的底层工具实现，提供 Agno Agent 兼容的 Toolkit 接口
 """
 from datetime import datetime

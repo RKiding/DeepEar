@@ -78,7 +78,7 @@ class ISQScore(BaseModel):
 DEFAULT_ISQ_TEMPLATE = ISQTemplate(
     template_id="default_isq_v1",
     template_name="标准投资信号质量评估框架 (ISQ v1.0)",
-    description="SignalFlux 默认的 ISQ 评估框架，用于标准化评估投资信号的质量维度",
+    description="AlphaEar 默认的 ISQ 评估框架，用于标准化评估投资信号的质量维度",
     
     dimensions={
         "sentiment": ISQDimensionSpec(

@@ -8,6 +8,7 @@ from typing import List, Dict, Any, Optional
 from agno.agent import Agent
 from agno.models.base import Model
 from loguru import logger
+from types import SimpleNamespace
 
 from utils.database_manager import DatabaseManager
 from utils.hybrid_search import InMemoryRAG
@@ -675,6 +676,80 @@ class ReportAgent:
             logger.error(f"Signal clustering failed: {e}")
             return []
 
+    @staticmethod
+    def build_structured_report(report_md: str, signals: List[Dict[str, Any]], clusters: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """构建结构化研报输出（便于前端渲染）"""
+        text = (report_md or "").strip()
+        lines = text.splitlines() if text else []
+
+        # 标题
+        title = "研报"
+        for line in lines:
+            if line.startswith("# "):
+                title = line.replace("# ", "").strip()
+                break
+
+        # 章节解析
+        sections: List[Dict[str, Any]] = []
+        current: Dict[str, Any] | None = None
+        for line in lines:
+            heading = re.match(r"^(#{2,4})\s+(.*)$", line.strip())
+            if heading:
+                if current:
+                    sections.append(current)
+                current = {"title": heading.group(2).strip(), "content": []}
+                continue
+            if current is None:
+                current = {"title": "摘要", "content": []}
+            current["content"].append(line)
+        if current:
+            sections.append(current)
+
+        # 摘要要点
+        bullets = [
+            re.sub(r"^[-*•]\s+", "", l.strip())
+            for l in lines
+            if l.strip().startswith(("- ", "* ", "• "))
+        ]
+        bullets = [b for b in bullets if b]
+
+        # 信号映射
+        signal_map = {}
+        for i, s in enumerate(signals, 1):
+            title_s = s.title if hasattr(s, "title") else s.get("title", "")
+            signal_map[i] = {
+                "id": i,
+                "title": title_s,
+                "summary": getattr(s, "summary", "") if not isinstance(s, dict) else s.get("summary", ""),
+                "sentiment_score": getattr(s, "sentiment_score", None) if not isinstance(s, dict) else s.get("sentiment_score"),
+                "confidence": getattr(s, "confidence", None) if not isinstance(s, dict) else s.get("confidence"),
+                "intensity": getattr(s, "intensity", None) if not isinstance(s, dict) else s.get("intensity"),
+                "impact_tickers": getattr(s, "impact_tickers", []) if not isinstance(s, dict) else s.get("impact_tickers", []),
+                "expected_horizon": getattr(s, "expected_horizon", "") if not isinstance(s, dict) else s.get("expected_horizon", "")
+            }
+
+        # 聚类
+        structured_clusters = []
+        for c in clusters or []:
+            ids = c.get("signal_ids", []) or []
+            structured_clusters.append({
+                "title": c.get("theme_title", ""),
+                "rationale": c.get("rationale", ""),
+                "signal_ids": ids,
+                "signals": [signal_map.get(i) for i in ids if i in signal_map]
+            })
+
+        return {
+            "title": title,
+            "summary_bullets": bullets[:8],
+            "sections": [
+                {"title": s["title"], "content": "\n".join(s["content"]).strip()}
+                for s in sections
+            ],
+            "clusters": structured_clusters,
+            "signals": list(signal_map.values())
+        }
+
     def generate_report(self, signals: List[Dict[str, Any]], user_query: str = None) -> str:
         """
         执行 Write-Plan-Edit 流程生成研报
@@ -878,8 +953,9 @@ class ReportAgent:
 
         forecast_map = self._build_forecast_map(final_response_content, signals)
         final_report_with_charts = self._process_charts(final_response_content, signals, forecast_map=forecast_map)
-        
-        return final_report_with_charts
+
+        structured_report = self.build_structured_report(final_response_content, signals, clusters)
+        return SimpleNamespace(content=final_report_with_charts, structured=structured_report)
 
     def _clean_markdown(self, text: str) -> str:
         """Helper to remove markdown code fences"""
@@ -1025,7 +1101,7 @@ class ReportAgent:
             cleaned_sections.append(section_fixed)
         
         # Use simple string concatenation or 0-indented string to avoid dedent issues with dynamic content
-        final_report = f"""# SignalFlux 全球市场趋势日报 ({current_date})
+        final_report = f"""# AlphaEar 全球市场趋势日报 ({current_date})
 
 [TOC]
 

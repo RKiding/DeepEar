@@ -1,1 +1,1 @@
-# SignalFlux utils package
+# AlphaEar utils package

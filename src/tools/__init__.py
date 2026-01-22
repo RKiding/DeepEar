@@ -1,6 +1,6 @@
 # src/tools/__init__.py
 """
-SignalFlux 工具包层 - Agno Toolkit 适配器
+AlphaEar 工具包层 - Agno Toolkit 适配器
 
 提供的 Toolkit 类：
 - NewsToolkit: 热点新闻获取

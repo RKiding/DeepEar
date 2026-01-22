@@ -1,6 +1,6 @@
 # src/agents/__init__.py
 """
-SignalFlux Agent 层 - 原生 Agno Agent（需要模型支持 Function Calling）
+AlphaEar Agent 层 - 原生 Agno Agent（需要模型支持 Function Calling）
 
 提供的 Agent 类：
 - TrendAgent: 热点趋势发现

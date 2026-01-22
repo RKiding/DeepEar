@@ -42,27 +42,21 @@ class NewsNowTools:
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
         )
         self.extractor = ContentExtractor()
+        # Simple in-memory cache: source_id -> {"time": timestamp, "data": []}
+        self._cache = {}
 
     def fetch_hot_news(self, source_id: str, count: int = 15, fetch_content: bool = False) -> List[Dict]:
         """
-        从指定新闻源获取热点新闻列表。
-        
-        Args:
-            source_id: 新闻源标识符。可选值按类别:
-                **金融类**: "cls" (财联社), "wallstreetcn" (华尔街见闻), 
-                           "xueqiu" (雪球), "eastmoney" (东方财富), "yicai" (第一财经)
-                **综合类**: "weibo" (微博热搜), "zhihu" (知乎热榜), "baidu" (百度热搜),
-                           "toutiao" (今日头条), "douyin" (抖音), "thepaper" (澎湃新闻)
-                **科技类**: "36kr" (36氪), "ithome" (IT之家), "v2ex", "juejin" (掘金),
-                           "hackernews" (Hacker News)
-                推荐金融分析使用 "cls", "wallstreetcn", "xueqiu"。
-            count: 获取的新闻数量，默认 15 条。
-            fetch_content: 是否同时抓取新闻正文内容，默认 False。
-        
-        Returns:
-            包含新闻信息的字典列表，每个字典包含 id, source, rank, title, url, content 等字段。
-            如果获取失败返回空列表。
+        从指定新闻源获取热点新闻列表（支持5分钟缓存）。
         """
+        # 1. Check cache validity (5 minutes)
+        cache_key = f"{source_id}_{count}"
+        cached = self._cache.get(cache_key)
+        now = time.time()
+        
+        if cached and (now - cached["time"] < 300):
+            logger.info(f"⚡ Using cached news for {source_id} (Age: {int(now - cached['time'])}s)")
+            return cached["data"]
 
         try:
             url = f"{self.BASE_URL}/api/s?id={source_id}"
@@ -88,16 +82,30 @@ class NewsNowTools:
                         "meta_data": item.get("extra", {})
                     })
                 
+                # Update Cache
+                self._cache[cache_key] = {"time": now, "data": processed_items}
+                logger.info(f"✅ Fetched and cached news for {source_id}")
+                
                 self.db.save_daily_news(processed_items)
                 return processed_items
             else:
                 logger.error(f"NewsNow API Error: {response.status_code}")
+                # Fallback to stale cache if available
+                if cached:
+                    logger.warning(f"⚠️ API failed, using stale cache for {source_id}")
+                    return cached["data"]
                 return []
         except Timeout:
             logger.error(f"Timeout fetching hot news from {source_id}")
+            if cached:
+                logger.warning(f"⚠️ Timeout, using stale cache for {source_id}")
+                return cached["data"]
             return []
         except RequestException as e:
             logger.error(f"Network error fetching hot news from {source_id}: {e}")
+            if cached:
+                 logger.warning(f"⚠️ Network check failed, using stale cache for {source_id}")
+                 return cached["data"]
             return []
         except json.JSONDecodeError:
             logger.error(f"Failed to parse JSON response from NewsNow for {source_id}")
