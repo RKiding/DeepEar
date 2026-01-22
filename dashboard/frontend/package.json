@@ -11,6 +11,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.16",
+    "@types/diff": "^7.0.2",
+    "diff": "^8.0.3",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.5",
     "lucide-react": "^0.562.0",
