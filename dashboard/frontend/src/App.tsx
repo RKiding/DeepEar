@@ -6,7 +6,7 @@ import { HistoryPanel } from './components/HistoryPanel'
 import { HotNewsPanel } from './components/HotNewsPanel'
 import { SignalCard } from './components/SignalCard'
 import { KLineChart } from './components/KLineChart'
-import { Send, Wifi, WifiOff, Radio, Loader2, BarChart3, Target, TrendingUp, GitCompare, Square, FileX } from 'lucide-react'
+import { Send, Wifi, WifiOff, Loader2, BarChart3, Target, TrendingUp, GitCompare, Square, FileX } from 'lucide-react'
 import { ComparisonView } from './components/ComparisonView'
 import { ReportRenderer } from './components/ReportRenderer'
 import { PhaseIndicator } from './components/PhaseIndicator'
@@ -239,7 +239,7 @@ function App() {
       <header className="header">
         <div className="logo">
           <div className="logo-icon">
-            <Radio size={18} />
+            <img src="/alphaear.svg" alt="AlphaEar" width={24} height={24} />
           </div>
           <span className="logo-text">AlphaEar</span>
         </div>
