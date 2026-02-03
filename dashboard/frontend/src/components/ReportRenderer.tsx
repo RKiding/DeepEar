@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import type { RunData } from '../types/RunData'
 import { SignalCard } from './SignalCard'
 import { KLineChart } from './KLineChart'
-import { BarChart3, Target, TrendingUp, GitMerge, ChevronDown, ChevronRight, List, Info, Sparkles, FileText } from 'lucide-react'
+import { BarChart3, Target, TrendingUp, GitMerge, ChevronDown, ChevronRight, List, Info, Sparkles, FileText, Share, Printer, X } from 'lucide-react'
 import './ReportRenderer.css'
 
 interface Props {
@@ -15,6 +15,29 @@ export function ReportRenderer({ data, query }: Props) {
         new Set(['signals', 'charts'])
     )
     const [viewMode, setViewMode] = useState<'structured' | 'full'>('structured')
+    const [showShareModal, setShowShareModal] = useState(false)
+    const [captcha, setCaptcha] = useState({ a: 0, b: 0, ans: 0, input: '' })
+
+    const initCaptcha = () => {
+        const a = Math.floor(Math.random() * 10) + 1
+        const b = Math.floor(Math.random() * 10) + 1
+        setCaptcha({ a, b, ans: a + b, input: '' })
+    }
+
+    const handleShareClick = () => {
+        initCaptcha()
+        setShowShareModal(true)
+    }
+
+    const verifyAndPrint = () => {
+        if (parseInt(captcha.input) === captcha.ans) {
+            setShowShareModal(false)
+            setTimeout(() => window.print(), 100)
+        } else {
+            alert("验证码错误")
+            initCaptcha()
+        }
+    }
 
     const chartList = Object.values(data.charts || {})
     const structured = data.report_structured
@@ -122,6 +145,64 @@ export function ReportRenderer({ data, query }: Props) {
                         {query && <span className="query">查询: {query}</span>}
                     </div>
                 </div>
+
+                <div className="report-actions" style={{ position: 'absolute', top: 20, right: 20 }}>
+                    <button
+                        className="btn-share"
+                        onClick={handleShareClick} type="button"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer' }}
+                    >
+                        <Share size={14} /> 分享 / 打印
+                    </button>
+                </div>
+
+                {showShareModal && (
+                    <div className="modal-overlay" style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.5)', zIndex: 9999, display: 'flex', justifyContent: 'center', alignItems: 'center'
+                    }}>
+                        <div className="modal-content" style={{
+                            background: 'white', padding: 24, borderRadius: 12, width: 320, position: 'relative'
+                        }}>
+                            <button
+                                onClick={() => setShowShareModal(false)}
+                                style={{ position: 'absolute', top: 12, right: 12, border: 'none', background: 'none', cursor: 'pointer' }}
+                            >
+                                <X size={18} color="#64748b" />
+                            </button>
+
+                            <h3 style={{ marginTop: 0, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Printer size={20} /> 打印/保存 PDF
+                            </h3>
+
+                            <p style={{ fontSize: 14, color: '#64748b', marginBottom: 20 }}>
+                                请完成简单的验证以继续打印或保存为 PDF。
+                            </p>
+
+                            <div className="captcha-box" style={{ marginBottom: 20 }}>
+                                <div style={{ marginBottom: 8, fontWeight: 500 }}>
+                                    {captcha.a} + {captcha.b} = ?
+                                </div>
+                                <input
+                                    type="number"
+                                    value={captcha.input}
+                                    onChange={e => setCaptcha({ ...captcha, input: e.target.value })}
+                                    onKeyDown={e => e.key === 'Enter' && verifyAndPrint()}
+                                    autoFocus
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                                    placeholder="输入结果"
+                                />
+                            </div>
+
+                            <button
+                                onClick={verifyAndPrint}
+                                style={{ width: '100%', padding: '10px', background: '#3b82f6', color: 'white', border: 'none', borderRadius: 6, cursor: 'pointer', fontWeight: 500 }}
+                            >
+                                确认并打印
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Full HTML Report View */}
                 {viewMode === 'full' && htmlContent ? (

@@ -480,7 +480,7 @@ async def start_run(request: RunRequest, current_user: dict = Depends(get_curren
     
     # 启动工作流
     # 启动工作流
-    asyncio.create_task(execute_workflow(run_id, request, user_id=current_user['id']))
+    asyncio.create_task(execute_workflow(run_id, request, user_id=current_user['id'], concurrency=request.concurrency))
     
     return RunResponse(run_id=run_id, status="started", query=request.query)
 
@@ -864,6 +864,7 @@ async def get_chart_dynamic(filename: str):
         raise HTTPException(404, "Chart not found")
         
     try:
+        import re
         content = file_path.read_text(encoding="utf-8")
         
         # 1. 注入背景色透明 (Inject into option object)
@@ -873,27 +874,52 @@ async def get_chart_dynamic(filename: str):
         # 使用 Dashboard 深色背景 #0f172a (Slate-900)
         TARGET_BG = "#0f172a"
         
-        if "option_" in content and " = {" in content:
-             import re
-             content = re.sub(r"(var option_[a-zA-Z0-9_]+ = \{)", f"\\1 \\n    backgroundColor: '{TARGET_BG}',", content)
-        
-        # 2. 切换 ECharts 主题
-        content = content.replace(", 'white',", ", 'dark',")
-        content = content.replace(", 'light',", ", 'dark',")
-        
-        # ... logic ...
-        if ", 'dark'," not in content:
-             content = re.sub(r",\s*'light',\s*", ", 'dark', ", content)
-             content = re.sub(r",\s*'white',\s*", ", 'dark', ", content)
-        
-        # 3. 额外优化
-        content = content.replace('"backgroundColor": "white"', f'"backgroundColor": "{TARGET_BG}"')
-        content = content.replace('"backgroundColor": "transparent"', f'"backgroundColor": "{TARGET_BG}"')
-        
-        # 4. 关键：强制 HTML body 背景
+        if "mxGraphModel" in content:
+             # Draw.io specific post-processing
+             # 1. Remove internal title to save space
+             content = re.sub(r'<h2>.*?</h2>', '', content, flags=re.DOTALL)
+             
+             # 2. Optimize body style for centering and fitting
+             new_body_style = (
+                 f"body {{ font-family: sans-serif; padding: 10px; margin: 0; "
+                 f"display: flex; justify-content: center; align-items: center; "
+                 f"min-height: 100vh; overflow: hidden; background: {TARGET_BG} !important; }}"
+             )
+             content = re.sub(r'body\s*\{[^}]*\}', new_body_style, content)
+             
+             # 3. Ensure mxgraph container is responsive
+             content = re.sub(
+                 r'\.mxgraph\s*\{[^}]*\}',
+                 f".mxgraph {{ border: 1px solid #334155; background: #fff; width: 100%; max-width: 100%; }}",
+                 content
+             )
+             
+             # 4. Inject center config if missing
+             if '"center": true' not in content:
+                  content = content.replace('"nav": true', '"nav": true, "center": true')
+
+        else:
+             # Standard ECharts post-processing
+             if "option_" in content and " = {" in content:
+                  content = re.sub(r"(var option_[a-zA-Z0-9_]+ = \{)", f"\\1 \\n    backgroundColor: '{TARGET_BG}',", content)
+             
+             # 2. 切换 ECharts 主题
+             content = content.replace(", 'white',", ", 'dark',")
+             content = content.replace(", 'light',", ", 'dark',")
+             
+             # ... logic ...
+             if ", 'dark'," not in content:
+                  content = re.sub(r",\s*'light',\s*", ", 'dark', ", content)
+                  content = re.sub(r",\s*'white',\s*", ", 'dark', ", content)
+             
+             # 3. 额外优化
+             content = content.replace('"backgroundColor": "white"', f'"backgroundColor": "{TARGET_BG}"')
+             content = content.replace('"backgroundColor": "transparent"', f'"backgroundColor": "{TARGET_BG}"')
+
+        # 4. 关键：强制 HTML body 背景 (Common for all)
         style_inject = f"""
         <style>
-            html, body {{ background: {TARGET_BG} !important; background-color: {TARGET_BG} !important; margin: 0; padding: 0; }}
+            html, body {{ background: {TARGET_BG} !important; background-color: {TARGET_BG} !important; }}
             .chart-container {{ background: {TARGET_BG} !important; background-color: {TARGET_BG} !important; }}
         </style>
         """
@@ -916,7 +942,133 @@ async def get_chart_dynamic(filename: str):
         return HTMLResponse(content=content)
     except Exception as e:
         logger.error(f"Failed to process chart {filename}: {e}")
-        return FileResponse(file_path)
+        try:
+            return FileResponse(file_path)
+        except Exception as fallback_e:
+            logger.error(f"Fallback also failed for {filename}: {fallback_e}")
+            raise HTTPException(500, f"Chart rendering failed: {e}")
+
+@app.get("/api/run/{run_id}/export")
+async def export_report(run_id: str, view: bool = False):
+    """
+    导出单一文件报告:
+    - 读取原始 HTML 报告
+    - 将所有 iframe 引用的图表转换为 base64 编码内联
+    - 返回可直接打开的单文件 HTML
+    """
+    import base64
+    import re
+    from fastapi.responses import Response
+    
+    db = get_db()
+    
+    # 1. Get run and report path
+    run = db.get_run(run_id)
+    if not run or not run.report_path:
+        # Fallback: try to find report by pattern if not in DB
+        # This handles cases where old runs might not have path saved, or path mismatch
+        report_files = list(Path("reports").glob(f"*{run_id}*.html"))
+        if report_files:
+            report_path = report_files[0]
+        else:
+            raise HTTPException(404, "Report not found")
+    else:
+        report_path = Path(run.report_path)
+    
+    if not report_path.exists():
+        raise HTTPException(404, f"Report file not found: {report_path}")
+
+    try:
+        # 2. Read content
+        html_content = report_path.read_text(encoding="utf-8")
+        
+        # 3. Inline iframes
+        # Function to replace relative src with base64 data URI
+        def replace_iframe_src(match):
+            rel_src = match.group(1)
+            # iframe path is relative to the report file
+            # report is in reports/, chart is in reports/charts/
+            # rel_src is usually "charts/xxx.html"
+            chart_path = report_path.parent / rel_src
+            
+            if chart_path.exists():
+                try:
+                    # Read chart content
+                    chart_content = chart_path.read_text(encoding="utf-8")
+                    
+                    # Apply the same dark mode optimization as the server does (optional but good)
+                    # We can reuse the logic partially by simple regex replacement on the content string
+                    # Or just use it raw. Let's start with raw but ensure background is handled if possible.
+                    # Since we are exporting, let's keep it robust and just embed what is there, 
+                    # relying on the chart file itself.
+                    # Note: server.py /api/charts logic is "on-the-fly". 
+                    # If we want the exported file to look like the dashboard, we should mimic that modification.
+                    # For now, let's just embed. The Draw.io logic is dynamic in server, so the file on disk is raw.
+                    # We should apply the Draw.io fix here too if we want the exported report to look good!
+                    
+                    # Export logic: use white background for better compatibility/printing
+                    TARGET_BG = "#ffffff"
+                    
+                    # Apply layout optimization but keep white background
+                    if "mxGraphModel" in chart_content:
+                        # Draw.io fix (keep compact layout but white bg)
+                        chart_content = re.sub(r'<h2>.*?</h2>', '', chart_content, flags=re.DOTALL)
+                        if '"center": true' not in chart_content:
+                             chart_content = chart_content.replace('"nav": true', '"nav": true, "center": true')
+                        
+                        new_body_style = (
+                             f"body {{ font-family: sans-serif; padding: 10px; margin: 0; "
+                             f"display: flex; justify-content: center; align-items: center; "
+                             f"min-height: 100vh; overflow: hidden; background: {TARGET_BG}; }}"
+                        )
+                        chart_content = re.sub(r'body\s*\{[^}]*\}', new_body_style, chart_content)
+                    
+                    elif "option_" in chart_content:
+                        # ECharts: ensures white background
+                        chart_content = chart_content.replace('"backgroundColor": "#0f172a"', '"backgroundColor": "#ffffff"')
+                        chart_content = chart_content.replace('"backgroundColor": "transparent"', '"backgroundColor": "#ffffff"')
+
+                    # Encode
+                    b64 = base64.b64encode(chart_content.encode('utf-8')).decode('utf-8')
+                    return f'src="data:text/html;base64,{b64}"'
+                except Exception as e:
+                    logger.warning(f"Failed to inline chart {rel_src}: {e}")
+                    return match.group(0)
+            else:
+                return match.group(0)
+
+        # Pattern: look for src="charts/..."
+        # We assume standard formatting from report_agent
+        optimized_html = re.sub(r'src="(charts/[^"]+)"', replace_iframe_src, html_content)
+        
+        # 4. Add Export Notice
+        notice_html = f"""
+        <div style="text-align: center; padding: 40px 20px; font-size: 13px; color: #64748b; border-top: 1px solid #eee; margin-top: 50px;">
+            <p>AlphaEar Intelligence Analysis Report • Standalone View</p>
+            <p>Generation Date: <span id="export-date"></span></p>
+            <script>document.getElementById('export-date').innerText = new Date().toLocaleString();</script>
+        </div>
+        </body>
+        """
+        optimized_html = optimized_html.replace("</body>", notice_html)
+        
+        filename = f"AlphaEar_Report_{run_id}.html"
+        
+        from fastapi.responses import HTMLResponse
+        if view:
+            return HTMLResponse(content=optimized_html)
+        else:
+            return Response(
+                content=optimized_html,
+                media_type="text/html",
+                headers={
+                    "Content-Disposition": f"attachment; filename={filename}"
+                }
+            )
+            
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(500, f"Export failed: {e}")
 
 async def execute_update_workflow(base_run_id: str, user_query: Optional[str], new_run_id: str, user_id: str = None):
     """Execute update logic"""
@@ -1058,7 +1210,7 @@ async def execute_update_workflow(base_run_id: str, user_query: Optional[str], n
 
 
 # ============ 工作流执行 ============
-async def execute_workflow(run_id: str, request: RunRequest, user_id: str = None):
+async def execute_workflow(run_id: str, request: RunRequest, user_id: str = None, concurrency: int = 5):
     """执行真实的 AlphaEar 工作流"""
     from .integration import dashboard_callback, workflow_runner
     
@@ -1131,7 +1283,8 @@ async def execute_workflow(run_id: str, request: RunRequest, user_id: str = None
             depth=request.depth,
             run_state=ctx,  # 传递 RunContext 而非全局 run_state
             user_id=user_id,
-            run_id=run_id
+            run_id=run_id,
+            concurrency=concurrency
         )
         
         # 等待工作流完成

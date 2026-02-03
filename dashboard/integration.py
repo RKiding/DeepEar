@@ -120,7 +120,8 @@ class WorkflowRunner:
         depth: Union[int, str] = "auto",
         run_state: Any = None, # Deprecated logic, server handles map
         user_id: Optional[str] = None,
-        run_id: str = None # Required for concurrency
+        run_id: str = None, # Required for concurrency
+        concurrency: int = 1
     ):
         if run_id in self._active_runs and self._active_runs[run_id].is_alive():
             raise RuntimeError(f"Run {run_id} is already active")
@@ -129,7 +130,7 @@ class WorkflowRunner:
         
         thread = threading.Thread(
             target=self._run_workflow_wrapper, # Use wrapper to set context
-            args=(run_id, query, sources or ["financial"], wide, depth, run_state, user_id),
+            args=(run_id, query, sources or ["financial"], wide, depth, run_state, user_id, concurrency),
             daemon=True
         )
         with self._lock:
@@ -192,7 +193,8 @@ class WorkflowRunner:
         wide: int,
         depth: Union[int, str],
         run_state: Any, # Deprecated in multi-user mode essentially, but kept for sig compatibility
-        user_id: Optional[str] = None
+        user_id: Optional[str] = None,
+        concurrency: int = 1
     ):
         """实际执行工作流（在后台线程中）- 完整复制 main_flow.py 逻辑"""
         cb = dashboard_callback
@@ -209,6 +211,8 @@ class WorkflowRunner:
             cb.phase("初始化", 5)
             cb.step("system", "System", f"🚀 AlphaEar Workflow 启动")
             cb.step("config", "System", f"Query: {query or '自动扫描'}, Sources: {sources}")
+            cb.step("config", "System", f"⚙️ Concurrency: {concurrency}")
+            logger.info(f"🔧 Workflow started with concurrency={concurrency}")
             
             workflow = self._ensure_workflow()
             
@@ -356,76 +360,198 @@ class WorkflowRunner:
                         pass
                 input_text = f"【{signal['title']}】\n{content[:3000]}"
                 
+            # --- New Concurrency Logic Start ---
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            
+            def analyze_single_signal_integration(signal_data, index, total_count):
+                """Helper for integration.py concurrency"""
                 try:
-                    # 调用 FinAgent
-                    check_cancelled()  # LLM调用前检查点
-                    sig_obj = workflow.fin_agent.analyze_signal(input_text, news_id=signal.get("id"))
+                    # Progress update (approximate since async)
+                    # We can't easily update phase progress from thread accurately without lock or messing up order
+                    # But individual signal processing doesn't need strict ordered progress updates.
+                    # For simplicity, we skip granular progress update inside thread or just log.
                     
-                    if sig_obj:
-                        # 补充来源
-                        if not sig_obj.sources and signal.get("url"):
-                            sig_obj.sources = [{
-                                "title": signal["title"],
-                                "url": signal["url"],
-                                "source_name": signal.get("source", "Unknown")
+                    t_title = signal_data.get('title', 'Unknown')[:30]
+                    # cb.step("thought", "FinAgent", f"📊 [Parallel] Analyzing: {t_title}...") # Avoid thread race on cb? cb should be thread safe-ish via loop.call_soon_threadsafe
+                    
+                    # Reconstruct context
+                    s_content = signal_data.get("content") or ""
+                    if len(s_content) < 50 and signal_data.get("url"):
+                         try:
+                             s_content = workflow.trend_agent.news_toolkit.fetch_news_content(signal_data["url"]) or ""
+                         except:
+                             pass
+                    s_input_text = f"【{signal_data['title']}】\n{s_content[:3000]}"
+                    
+                    # Run Analysis
+                    s_sig_obj = workflow.fin_agent.analyze_signal(s_input_text, news_id=signal_data.get("id"))
+                    
+                    if s_sig_obj:
+                         # Source fallback
+                        if not s_sig_obj.sources and signal_data.get("url"):
+                            s_sig_obj.sources = [{
+                                "title": signal_data["title"],
+                                "url": signal_data["url"],
+                                "source_name": signal_data.get("source", "Unknown")
                             }]
-                        
-                        sig_dict = sig_obj.dict()
-                        analyzed_signals.append(sig_dict)
-                        
-                        # 推送信号到 Dashboard
-                        cb.signal(sig_dict)
-                        
-                        # ISQ 评分
-                        isq_str = f"I={sig_obj.intensity}, S={sig_obj.sentiment_score:.2f}, C={sig_obj.confidence:.2f}"
-                        cb.step("signal", "FinAgent", f"📊 ISQ: {isq_str}")
-                        
-                        # 推送标的信息
-                        for ticker in sig_obj.impact_tickers[:2]:
-                            ticker_code = ticker.get("ticker", "")
-                            ticker_name = ticker.get("name", "")
-                            if ticker_code:
-                                cb.step("result", "FinAgent", f"→ {ticker_name} ({ticker_code})")
-                                
-                                # 尝试获取价格数据推送图表
-                                try:
-                                    from datetime import timedelta
-                                    end_date = datetime.now().strftime('%Y-%m-%d')
-                                    start_date = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
-                                    # 使用底层 StockTools 获取 DataFrame，而非 Toolkit 的 markdown 输出
-                                    df = workflow.trend_agent.stock_toolkit._stock_tools.get_stock_price(ticker_code, start_date, end_date)
-                                    if df is not None and not df.empty:
-                                        # Pass full signal content for news-aware prediction
-                                        chart_data = self._format_chart_from_df(
-                                            ticker_code, 
-                                            ticker_name, 
-                                            df, 
-                                            news_text=input_text,
-                                            prediction_logic=sig_obj.summary
-                                        )
-                                        cb.chart(ticker_code, chart_data)
-                                except Exception as e:
-                                    logger.warning(f"Chart data fetch failed for {ticker_code}: {e}")
-                        
-                        # 传导链
-                        if sig_obj.transmission_chain:
-                            chain = " → ".join([n.node_name for n in sig_obj.transmission_chain[:3]])
-                            cb.step("thought", "FinAgent", f"🔗 {chain}")
+                        return s_sig_obj.dict(), s_sig_obj, signal_data
+                    return None, None, signal_data
+                except Exception as ex:
+                    logger.error(f"Parallel analysis failed for {signal_data.get('title')}: {ex}")
+                    return None, None, signal_data
+
+            if concurrency > 1:
+                cb.step("status", "System", f"🚀 启动并发分析 (并发数: {concurrency})")
+                with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                    futures = {executor.submit(analyze_single_signal_integration, sig, idx, total): sig for idx, sig in enumerate(high_value_signals)}
+                    
+                    completed_count = 0
+                    for future in as_completed(futures):
+                        try:
+                            check_cancelled()
+                            completed_count += 1
+                            progress = 50 + int(completed_count / total * 25)
+                            cb.phase(f"分析信号 {completed_count}/{total}", progress)
                             
-                            # 推送传导图
-                            graph = self._build_graph(sig_obj)
-                            cb.graph(graph)
+                            sig_dict_res, sig_obj_res, original_sig = future.result()
+                            
+                            if sig_dict_res and sig_obj_res:
+                                analyzed_signals.append(sig_dict_res)
+                                cb.signal(sig_dict_res)
+                                
+                                # Logs & Steps
+                                isq_str_res = f"I={sig_obj_res.intensity}, S={sig_obj_res.sentiment_score:.2f}, C={sig_obj_res.confidence:.2f}"
+                                cb.step("signal", "FinAgent", f"📊 {original_sig.get('title')[:20]}... ISQ: {isq_str_res}")
+                                
+                                # Tickers & Charts
+                                for ticker in sig_obj_res.impact_tickers[:2]:
+                                    ticker_code = ticker.get("ticker", "")
+                                    ticker_name = ticker.get("name", "")
+                                    if ticker_code:
+                                        # cb.step("result", "FinAgent", f"→ {ticker_name} ({ticker_code})")
+                                        # Fetch chart (sync in thread is fine)
+                                        try:
+                                            from datetime import timedelta
+                                            e_date = datetime.now().strftime('%Y-%m-%d')
+                                            s_date = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
+                                            df_res = workflow.trend_agent.stock_toolkit._stock_tools.get_stock_price(ticker_code, s_date, e_date)
+                                            if df_res is not None and not df_res.empty:
+                                                # Need input text for prediction
+                                                s_c = original_sig.get("content") or "" 
+                                                # (Simplified content retrieval again? or pass it out. Let's re-use simple one)
+                                                c_input = f"【{original_sig['title']}】\n{s_c[:3000]}"
+                                                
+                                                chart_data_res = self._format_chart_from_df(
+                                                    ticker_code, ticker_name, df_res, news_text=c_input, prediction_logic=sig_obj_res.summary
+                                                )
+                                                cb.chart(ticker_code, chart_data_res)
+                                        except Exception as chart_e:
+                                             logger.warning(f"Chart failed: {chart_e}")
+
+                                # Graph
+                                if sig_obj_res.transmission_chain:
+                                    graph_res = self._build_graph(sig_obj_res)
+                                    cb.graph(graph_res)
+
+                                # Save DB
+                                sig_dict_res["user_id"] = user_id
+                                if user_id and sig_dict_res.get("signal_id"):
+                                     sig_dict_res["signal_id"] = f"{sig_dict_res['signal_id']}_{user_id}"
+                                workflow.db.save_signal(sig_dict_res)
+                            
+                        except Exception as thread_e:
+                            cb.step("error", "FinAgent", f"❌ Thread Error: {thread_e}")
+
+            else:
+                # Sequential Loop (Original)
+                for i, signal in enumerate(high_value_signals):
+                    check_cancelled()  # 取消检查点
+                    progress = 50 + int((i + 1) / total * 25)
+                    cb.phase(f"分析信号 {i+1}/{total}", progress)
+                    
+                    title = signal.get('title', 'Unknown')[:30]
+                    cb.step("thought", "FinAgent", f"📊 分析: {title}...")
+                    
+                    # 构造输入
+                    content = signal.get("content") or ""
+                    if len(content) < 50 and signal.get("url"):
+                        try:
+                            content = workflow.trend_agent.news_toolkit.fetch_news_content(signal["url"]) or ""
+                        except:
+                            pass
+                    input_text = f"【{signal['title']}】\n{content[:3000]}"
+                    
+                    try:
+                        # 调用 FinAgent
+                        check_cancelled()  # LLM调用前检查点
+                        sig_obj = workflow.fin_agent.analyze_signal(input_text, news_id=signal.get("id"))
                         
-                        # 保存到数据库
-                        sig_dict["user_id"] = user_id
-                        if user_id and sig_dict.get("signal_id"):
-                             sig_dict["signal_id"] = f"{sig_dict['signal_id']}_{user_id}"
-                        workflow.db.save_signal(sig_dict)
-                    else:
-                        cb.step("warning", "FinAgent", f"⚠️ 无法解析: {title}")
-                        
-                except Exception as e:
-                    cb.step("error", "FinAgent", f"❌ 分析失败: {str(e)[:50]}")
+                        if sig_obj:
+                            # 补充来源
+                            if not sig_obj.sources and signal.get("url"):
+                                sig_obj.sources = [{
+                                    "title": signal["title"],
+                                    "url": signal["url"],
+                                    "source_name": signal.get("source", "Unknown")
+                                }]
+                            
+                            sig_dict = sig_obj.dict()
+                            analyzed_signals.append(sig_dict)
+                            
+                            # 推送信号到 Dashboard
+                            cb.signal(sig_dict)
+                            
+                            # ISQ 评分
+                            isq_str = f"I={sig_obj.intensity}, S={sig_obj.sentiment_score:.2f}, C={sig_obj.confidence:.2f}"
+                            cb.step("signal", "FinAgent", f"📊 ISQ: {isq_str}")
+                            
+                            # 推送标的信息
+                            for ticker in sig_obj.impact_tickers[:2]:
+                                ticker_code = ticker.get("ticker", "")
+                                ticker_name = ticker.get("name", "")
+                                if ticker_code:
+                                    cb.step("result", "FinAgent", f"→ {ticker_name} ({ticker_code})")
+                                    
+                                    # 尝试获取价格数据推送图表
+                                    try:
+                                        from datetime import timedelta
+                                        end_date = datetime.now().strftime('%Y-%m-%d')
+                                        start_date = (datetime.now() - timedelta(days=60)).strftime('%Y-%m-%d')
+                                        # 使用底层 StockTools 获取 DataFrame，而非 Toolkit 的 markdown 输出
+                                        df = workflow.trend_agent.stock_toolkit._stock_tools.get_stock_price(ticker_code, start_date, end_date)
+                                        if df is not None and not df.empty:
+                                            # Pass full signal content for news-aware prediction
+                                            chart_data = self._format_chart_from_df(
+                                                ticker_code, 
+                                                ticker_name, 
+                                                df, 
+                                                news_text=input_text,
+                                                prediction_logic=sig_obj.summary
+                                            )
+                                            cb.chart(ticker_code, chart_data)
+                                    except Exception as e:
+                                        logger.warning(f"Chart data fetch failed for {ticker_code}: {e}")
+                            
+                            # 传导链
+                            if sig_obj.transmission_chain:
+                                chain = " → ".join([n.node_name for n in sig_obj.transmission_chain[:3]])
+                                cb.step("thought", "FinAgent", f"🔗 {chain}")
+                                
+                                # 推送传导图
+                                graph = self._build_graph(sig_obj)
+                                cb.graph(graph)
+                            
+                            # 保存到数据库
+                            sig_dict["user_id"] = user_id
+                            if user_id and sig_dict.get("signal_id"):
+                                 sig_dict["signal_id"] = f"{sig_dict['signal_id']}_{user_id}"
+                            workflow.db.save_signal(sig_dict)
+                        else:
+                            cb.step("warning", "FinAgent", f"⚠️ 无法解析: {title}")
+                            
+                    except Exception as e:
+                        cb.step("error", "FinAgent", f"❌ 分析失败: {str(e)[:50]}")
+            # --- Concurrency Logic End ---
             
             if not analyzed_signals:
                 cb.phase("完成", 100)

@@ -38,6 +38,7 @@ class RunRequest(BaseModel):
     sources: Union[str, List[str]] = "financial"
     wide: int = 10
     depth: Union[int, str] = "auto"
+    concurrency: int = 1
 
 
 class RunResponse(BaseModel):

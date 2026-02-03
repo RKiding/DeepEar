@@ -413,11 +413,14 @@ class VisualizerTools:
         import json
         
         # 构造配置字典
+        # center: 居中
+        # fit: 自动适应大小
         config = {
             "highlight": "#0000ff",
             "nav": True,
             "resize": True,
             "toolbar": "zoom",
+            "center": True, 
             "xml": xml_content
         }
         
@@ -435,12 +438,17 @@ class VisualizerTools:
             <meta charset="UTF-8">
             <title>{title}</title>
             <style>
-                body {{ font-family: sans-serif; padding: 20px; }}
-                .mxgraph {{ border: 1px solid #ddd; background: #fff; }}
+                body {{ font-family: sans-serif; padding: 10px; margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; overflow: hidden; }}
+                .mxgraph {{ 
+                    border: 1px solid #ddd; 
+                    background: #fff; 
+                    width: 100%;
+                    max-width: 100%;
+                }}
             </style>
         </head>
         <body>
-            <h2>{title}</h2>
+            <!-- Title removed from body to save space, it is already in the main report caption -->
             <div class="mxgraph" style="max-width:100%;border:1px solid transparent;" data-mxgraph='{safe_json_str}'></div>
             <script type="text/javascript" src="https://viewer.diagrams.net/js/viewer-static.min.js"></script>
         </body>

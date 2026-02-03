@@ -1495,52 +1495,61 @@ class ReportAgent:
                         nodes_str = json.dumps(nodes, sort_keys=True, ensure_ascii=False)
                         content_hash = hashlib.md5(nodes_str.encode()).hexdigest()[:8]
                         
-                        # Generate XML using LLM
-                        try:
-                            from prompts.visualizer import get_drawio_system_prompt, get_drawio_task
-                            
-                            # Use tool_model (usually faster/cheaper) or main model
-                            # Creating a lightweight agent purely for XML generation
-                            visualizer_agent = Agent(
-                                model=self.tool_model,
-                                instructions=[get_drawio_system_prompt()],
-                                markdown=False
-                            )
-                            
-                            logger.info(f"🎨 Generating Draw.io XML for '{title}'...")
-                            resp = visualizer_agent.run(get_drawio_task(nodes, title))
-                            xml_content = resp.content
-                            
-                            # Basic cleanup if LLM wrapped in markdown code blocks
-                            match = re.search(r'<mxGraphModel.*?</mxGraphModel>', xml_content, re.DOTALL)
-                            if match:
-                                xml_content = match.group(0)
-                            
-                            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                            filename = f"reports/charts/trans_{timestamp}_{content_hash}.html"
-                            
-                            if match: # Only save if valid XML found
-                                VisualizerTools.render_drawio_to_html(xml_content, filename, title)
-                                rel_path = f"charts/trans_{timestamp}_{content_hash}.html"
-                                return f'\n<iframe src="{rel_path}" width="100%" height="500px" style="border:none;"></iframe>\n<p style="text-align:center;color:gray;font-size:12px">交互式逻辑推演图: {title} (AI Generated)</p>\n'
-                            else:
-                                logger.warning(f"⚠️ Failed to extract XML from Visualizer Agent response for {title}")
-                                # Fallback to old graph if XML gen fails? Or just return error text?
-                                # Let's try fallback to old graph if XML fails, for robustness.
-                                pass 
-                                
-                        except Exception as e:
-                            logger.error(f"Draw.io generation failed: {e}")
+                        # Generate XML using LLM with retry
+                        max_retries = 2
+                        xml_success = False
                         
-                        # Fallback mechanism (Old Graph)
-                        logger.info("⚠️ Falling back to Pyecharts Graph for Transmission Chain.")
-                        chart = VisualizerTools.generate_transmission_graph(nodes, title)
-                        if chart:
-                            timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                            filename = f"reports/charts/trans_legacy_{timestamp}_{content_hash}.html"
-                            VisualizerTools.render_chart_to_file(chart, filename)
-                            rel_path = f"charts/trans_legacy_{timestamp}_{content_hash}.html"
-                            return f'\n<iframe src="{rel_path}" width="100%" height="420px" style="border:none;"></iframe>\n<p style="text-align:center;color:gray;font-size:12px">逻辑传导拓扑图: {title}</p>\n'
+                        for attempt in range(max_retries):
+                            try:
+                                from prompts.visualizer import get_drawio_system_prompt, get_drawio_task
+                                
+                                # Use tool_model (usually faster/cheaper) or main model
+                                # Creating a lightweight agent purely for XML generation
+                                visualizer_agent = Agent(
+                                    model=self.tool_model,
+                                    instructions=[get_drawio_system_prompt()],
+                                    markdown=False
+                                )
+                                
+                                logger.info(f"🎨 Generating Draw.io XML for '{title}' (attempt {attempt + 1}/{max_retries})...")
+                                resp = visualizer_agent.run(get_drawio_task(nodes, title))
+                                xml_content = resp.content
+                                
+                                # Basic cleanup if LLM wrapped in markdown code blocks
+                                match = re.search(r'<mxGraphModel.*?</mxGraphModel>', xml_content, re.DOTALL)
+                                if match:
+                                    xml_content = match.group(0)
+                                    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                                    filename = f"reports/charts/trans_{timestamp}_{content_hash}.html"
+                                    
+                                    result_path = VisualizerTools.render_drawio_to_html(xml_content, filename, title)
+                                    if result_path:
+                                        rel_path = f"charts/trans_{timestamp}_{content_hash}.html"
+                                        xml_success = True
+                                        return f'\n<iframe src="{rel_path}" width="100%" height="500px" style="border:none;"></iframe>\n<p style="text-align:center;color:gray;font-size:12px">交互式逻辑推演图: {title} (AI Generated)</p>\n'
+                                    else:
+                                        logger.warning(f"⚠️ Render failed for {title}, attempt {attempt + 1}")
+                                else:
+                                    logger.warning(f"⚠️ Failed to extract XML from response for {title}, attempt {attempt + 1}")
+                                    
+                            except Exception as e:
+                                logger.error(f"Draw.io generation failed (attempt {attempt + 1}): {e}")
+                            
+                            # Wait before retry
+                            if attempt < max_retries - 1:
+                                import time
+                                time.sleep(1)
+                        
+                        # Fallback mechanism (Old Graph) if all retries failed
+                        if not xml_success:
+                            logger.info("⚠️ Falling back to Pyecharts Graph for Transmission Chain.")
+                            chart = VisualizerTools.generate_transmission_graph(nodes, title)
+                            if chart:
+                                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                                filename = f"reports/charts/trans_legacy_{timestamp}_{content_hash}.html"
+                                VisualizerTools.render_chart_to_file(chart, filename)
+                                rel_path = f"charts/trans_legacy_{timestamp}_{content_hash}.html"
+                                return f'\n<iframe src="{rel_path}" width="100%" height="420px" style="border:none;"></iframe>\n<p style="text-align:center;color:gray;font-size:12px">逻辑传导拓扑图: {title}</p>\n'
 
                 # 如果是其他类型或失败，保留原文或者显示错误
                 return f"```json\n{json_str}\n```" # Fallback to json display if render fails logic mismatch

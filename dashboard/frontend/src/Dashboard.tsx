@@ -6,7 +6,7 @@ import { HistoryPanel } from './components/HistoryPanel'
 import { HotNewsPanel } from './components/HotNewsPanel'
 import { SignalCard } from './components/SignalCard'
 import { KLineChart } from './components/KLineChart'
-import { Send, Wifi, WifiOff, Loader2, BarChart3, Target, TrendingUp, GitCompare, Square, FileX, LogOut } from 'lucide-react'
+import { Send, Wifi, WifiOff, Loader2, BarChart3, Target, TrendingUp, GitCompare, Square, FileX, LogOut, Download, Share2 } from 'lucide-react'
 import { ComparisonView } from './components/ComparisonView'
 import { ReportRenderer } from './components/ReportRenderer'
 import { PhaseIndicator } from './components/PhaseIndicator'
@@ -23,6 +23,7 @@ export function Dashboard() {
     const [selectedSources, setSelectedSources] = useState<string[]>(['financial'])
     const [wide, setWide] = useState(10)
     const [depth, setDepth] = useState<string>('auto')
+    const [concurrency, setConcurrency] = useState(1)
     const { sendCommand } = useWebSocket()
 
     const {
@@ -141,7 +142,8 @@ export function Dashboard() {
                     query: queryInput.trim() || null,
                     sources: resolveSourcesPayload(),
                     wide,
-                    depth
+                    depth,
+                    concurrency
                 })
             })
 
@@ -203,6 +205,9 @@ export function Dashboard() {
     }
 
     const handleUpdateRun = async (runId: string) => {
+        const userInput = window.prompt("请输入追踪更新的指令 (可选):", "Update based on latest market data")
+        if (userInput === null) return
+
         try {
             setLoading(true)
             const res = await fetch(`${API_BASE}/api/run/${runId}/update`, {
@@ -211,7 +216,7 @@ export function Dashboard() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ query: 'Update based on latest market data' })
+                body: JSON.stringify({ query: userInput })
             })
             if (res.ok) {
                 const data = await res.json()
@@ -366,6 +371,24 @@ export function Dashboard() {
                                 <option value="15">15</option>
                                 <option value="20">20</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div className="param-row" style={{ marginTop: '12px' }}>
+                        <div className="param-group">
+                            <div className="param-label">并发数 (Concurrency)</div>
+                            <input
+                                type="number"
+                                min={1}
+                                max={15}
+                                value={concurrency}
+                                onChange={(e) => setConcurrency(Math.max(1, Math.min(15, Number(e.target.value) || 5)))}
+                                className="param-input"
+                                title="设置信号分析的并发线程数 (1-15)"
+                            />
+                            <div className="param-help" style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                                建议根据机器性能设置 (默认: 1, 推荐: 3-5)
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -537,10 +560,43 @@ export function Dashboard() {
                                 </div>
                             ) : (
                                 currentRunData && (
-                                    <ReportRenderer
-                                        data={currentRunData}
-                                        query={activeRun?.query || query || undefined}
-                                    />
+                                    <>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginBottom: '16px' }}>
+                                            <button
+                                                className="btn-secondary"
+                                                style={{ padding: '6px 14px', height: '32px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                                                onClick={() => {
+                                                    const url = `${window.location.protocol}//${window.location.host}/api/run/${currentRunData.run_id}/export?view=true`;
+                                                    navigator.clipboard.writeText(url).then(() => alert('报告预览/分享链接已复制到剪贴板'));
+                                                }}
+                                                title="复制下载链接"
+                                            >
+                                                <Share2 size={14} /> 分享
+                                            </button>
+                                            <button
+                                                className="btn-secondary"
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    height: '32px',
+                                                    fontSize: '13px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    backgroundColor: '#2563eb',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
+                                                }}
+                                                onClick={() => window.open(`/api/run/${currentRunData.run_id}/export`, '_blank')}
+                                            >
+                                                <Download size={14} /> 导出完整报告
+                                            </button>
+                                        </div>
+                                        <ReportRenderer
+                                            data={currentRunData}
+                                            query={activeRun?.query || query || undefined}
+                                        />
+                                    </>
                                 )
                             )
                         )}

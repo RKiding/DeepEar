@@ -21,7 +21,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({ oldText, newText }) => {
                         key={index}
                         style={{ backgroundColor: color, color: textColor, whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}
                     >
-                        {part.value.split('\n').map((line, i) => {
+                        {part.value.split('\n').map((line: string, i: number) => {
                             if (line === '') return null; // Skip empty lines mostly or handle them?
                             return <div key={i}>{prefix}{line}</div>
                         })}

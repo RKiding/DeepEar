@@ -105,15 +105,15 @@ AlphaEar is designed for financial analysts, quantitative researchers, and indiv
 #### Option 1: Start the Dashboard (Recommended)
 Launch the modern web interface to monitor and control the agents visually:
 ```bash
-# Start the backend server
-uv run python -m dashboard.server
-
-# Start the frontend (in a separate terminal)
+# Initial the frontend (First time only)
 cd dashboard/frontend
-npm install  # (First time only)
-npm run dev
+npm install 
+npm run build
+
+# Start the server
+uv run python -m dashboard.server
 ```
-Open `http://localhost:5173` in your browser.
+Open `http://localhost:8765` in your browser.
 
 #### Option 2: Command Line Interface
 Execute the main workflow directly:
@@ -129,8 +129,10 @@ uv run src/main_flow.py
 | `--wide` | Number of news items to fetch per source | `10` |
 | `--depth` | Report depth: `auto` (LLM decided) or an integer limit | `auto` |
 | `--template` | ISQ scoring template ID | `default_isq_v1` |
+| `--concurrency` | Concurrency level for signal analysis (max workers) | `1` |
 | `--resume` | Resume from the latest checkpoint | `False` |
 | `--resume-from` | Checkpoint to resume from: `report` (reuse MD), `analysis` (rerender) | `report` |
+| `--update-from` | Update an existing run (provide base run ID) to track signal evolution | `None` |
 
 The system will start the agent workflow: identifying intent -> fetching trends -> analyzing signals -> predictive modeling -> generating reports. 
 Artifacts will be saved in the `reports/` directory.

@@ -106,15 +106,15 @@ AlphaEar 专为金融分析师、量化研究员和个人投资者设计，旨�
 #### 方式 1：启动仪表盘（推荐）
 启动 Web 界面以可视化方式监控和控制智能体：
 ```bash
+# 启动前端界面 (仅首次)
+cd dashboard/frontend
+npm install
+npm run build
+
 # 启动后端服务
 uv run python -m dashboard.server
-
-# 启动前端界面 (在另一个终端)
-cd dashboard/frontend
-npm install  # (仅首次)
-npm run dev
 ```
-在浏览器中打开 `http://localhost:5173`。
+在浏览器中打开 `http://localhost:8765`。
 
 #### 方式 2：命令行界面 (CLI)
 直接执行主工作流：
@@ -130,8 +130,10 @@ uv run src/main_flow.py
 | `--wide` | 每个来源抓取的新闻条数 | `10` |
 | `--depth` | 报告深度: `auto` (由 LLM 判断) 或整数限制 | `auto` |
 | `--template` | ISQ 评分模板 ID | `default_isq_v1` |
+| `--concurrency` | 信号分析的并发线程数 (最大工作线程) | `1` |
 | `--resume` | 从最近的断点恢复运行 | `False` |
 | `--resume-from` | 恢复位置: `report` (仅重绘 MD), `analysis` (重新生成信号分析) | `report` |
+| `--update-from` | 基于已有 Run ID 更新分析 (追踪逻辑演变) | `None` |
 
 系统将启动智能体工作流：识别意图 -> 抓取热点 -> 分析信号 -> 时序预测建模 -> 生成报告。
 生成的产物将保存在 `reports/` 目录下。

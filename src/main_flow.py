@@ -15,7 +15,8 @@ from agents import TrendAgent, FinAgent, ReportAgent, IntentAgent
 from utils.stock_tools import StockTools
 from agno.agent import Agent
 from prompts.trend_agent import get_news_filter_instructions
-from utils.checkpointing import CheckpointManager
+from utils.checkpointing import CheckpointManager, resolve_latest_run_id
+from utils.logging_setup import setup_file_logging, make_run_id
 from utils.md_to_html import save_report_as_html
 
 class SignalFluxWorkflow:
@@ -132,6 +133,7 @@ class SignalFluxWorkflow:
         resume_from: str = "report",
         checkpoint_dir: str = "reports/checkpoints",
         user_id: Optional[str] = None,
+        concurrency: int = 1,
     ) -> Optional[str]:
         """执行完整工作流
         
@@ -140,6 +142,7 @@ class SignalFluxWorkflow:
             wide:  新闻抓取广度（每个源抓取的数量）
             depth: 生成报告的深度，若为 'auto'，则由 LLM 总结判断，若为整数则限制最后生成的信号数量
             query:  用户查询意图（可选），如 "香港火灾"、"A股科技板块"
+            concurrency: 信号分析并发数，默认为 1（串行）
             
         Returns:
             生成的报告文件路径，或 None（如果失败）
@@ -369,46 +372,153 @@ class SignalFluxWorkflow:
             logger.info(f"✅ Using {len(analyzed_signals)} analyzed signals from checkpoint")
         else:
 
-            for signal in high_value_signals:
-                logger.info(f"Analyzing: {signal['title']}")
 
-                # 2. 构造上下文
-                content = signal.get("content") or ""
-                if len(content) < 50 and signal.get("url"):
-                    content = self.trend_agent.news_toolkit.fetch_news_content(signal["url"]) or ""
-                input_text = f"【{signal['title']}】\n{content[:3000]}"
-
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            
+            def analyze_single_signal(signal_data):
+                """Wrapper for single signal analysis to use in thread pool"""
                 try:
+                    logger.info(f"Analyzing: {signal_data['title']}")
+                    # 2. 构造上下文
+                    content = signal_data.get("content") or ""
+                    if len(content) < 50 and signal_data.get("url"):
+                        content = self.trend_agent.news_toolkit.fetch_news_content(signal_data["url"]) or ""
+                    input_text = f"【{signal_data['title']}】\n{content[:3000]}"
+                    
                     # 调用 FinAgent 执行 ISQ 解析
-                    sig_obj = self.fin_agent.analyze_signal(input_text, news_id=signal.get("id"))
+                    sig_obj = self.fin_agent.analyze_signal(input_text, news_id=signal_data.get("id"))
 
                     if sig_obj:
                         # 补充来源信息 (如果模型没填全)
-                        if not sig_obj.sources and signal.get("url"):
-                            sig_obj.sources = [{"title": signal["title"], "url": signal["url"], "source_name": signal.get("source", "Unknown")}]
-
-                        # 保存到深度信号表
+                        if not sig_obj.sources and signal_data.get("url"):
+                            sig_obj.sources = [{"title": signal_data["title"], "url": signal_data["url"], "source_name": signal_data.get("source", "Unknown")}]
+                            
                         sig_dict = sig_obj.dict()
                         if user_id:
                             sig_dict['user_id'] = user_id
                             if sig_dict.get('signal_id'):
                                 sig_dict['signal_id'] = f"{sig_dict['signal_id']}_{user_id}"
-                        self.db.save_signal(sig_dict)
-                        analyzed_signals.append(sig_obj.dict())
-
-                        # 同步回 news 表（旧逻辑兼容）
-                        if signal.get("id"):
-                            self.db.update_news_content(signal["id"], analysis=sig_obj.summary)
-
-                        # Incremental checkpoint every success to enable resume
-                        if len(analyzed_signals) % 3 == 0:
-                            ckpt.save_json("analyzed_signals.json", analyzed_signals)
+                        
+                        # Note: Database writes are generally thread-safe in sqlite3 if sharing connection is handled, 
+                        # but here DatabaseManager creates new connection per instance usually. 
+                        # Ideally we should use a lock or separate db instance if `self.db` is shared.
+                        # Assuming DatabaseManager handles its own connection or valid concurrency.
+                        # If not, might need a lock. `self.db` uses `sqlite3.connect` which is valid for threads if check_same_thread=False
+                        # But better to be safe and acquire lock for DB writes if needed.
+                        # For now, we will do DB write in the main thread or use lock if errors appear.
+                        # Actually, better to return the result and write in main thread to avoid DB collision issues completely.
+                        
+                        return sig_dict, signal_data.get("id"), sig_obj.summary
                     else:
-                        logger.warning(f"Could not get structured analysis for {signal['title']}, skipping")
+                        logger.warning(f"Could not get structured analysis for {signal_data['title']}, skipping")
+                        return None, None, None
                 except Exception as e:
-                    logger.error(f"Analysis failed for {signal['title']}: {e}")
+                    logger.error(f"Analysis failed for {signal_data['title']}: {e}")
+                    raise e # Re-raise to trigger fallback if needed
 
-            ckpt.save_json("analyzed_signals.json", analyzed_signals)
+            if concurrency > 1:
+                logger.info(f"🚀 Using ThreadPoolExecutor with max_workers={concurrency} for analysis")
+                try:
+                    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                        future_to_signal = {executor.submit(analyze_single_signal, sig): sig for sig in high_value_signals}
+                        
+                        processed_count = 0
+                        for future in as_completed(future_to_signal):
+                            sig_original = future_to_signal[future]
+                            try:
+                                result_dict, sig_id_res, summary_res = future.result()
+                                if result_dict:
+                                    # Write to DB (Main Thread Safe)
+                                    self.db.save_signal(result_dict)
+                                    analyzed_signals.append(result_dict)
+                                    if sig_id_res:
+                                        self.db.update_news_content(sig_id_res, analysis=summary_res)
+                                
+                                processed_count += 1
+                                if processed_count % 3 == 0:
+                                    ckpt.save_json("analyzed_signals.json", analyzed_signals)
+                            except Exception as e:
+                                logger.error(f"Thread execution failed for {sig_original['title']}: {e}")
+                                # Determine if we should fallback? 
+                                # If many fail, maybe. For now just log. 
+                                # Ideally, if we see a specific "RateLimit" error, we abort and switch.
+                                
+                    # If all good
+                    ckpt.save_json("analyzed_signals.json", analyzed_signals)
+                    
+                except Exception as e:
+                    logger.error(f"⚠️ Critical error in concurrency mode: {e}. Falling back to sequential (1 worker).")
+                    # Fallback Logic: Filter out already analyzed signals and process the rest sequentially
+                    analyzed_ids = set(s.get("signal_id") for s in analyzed_signals) # Note: signal_id might be generated, relying on uniqueness might be tricky.
+                    # Better: usage `high_value_signals` index or ID.
+                    
+                    logger.info("🔄 Fallback: Switching to sequential processing...")
+                    # Sequential loop for remaining items (simple approach: just run the original sequential loop for ALL, checking duplicates or just use what's left)
+                    # For simplicity in this iteration, we just continue sequential loop for items NOT in analyzed_signals (by ID logic if possible, or just retry all if safe/idipotent).
+                    # Since analyze is idempotent-ish (updates DB), we can retry relevant ones.
+                    
+                    # Let's just run sequential logic for ANY that are not in analyzed list (by title match?)
+                    analyzed_titles = set(s.get("title") for s in analyzed_signals)
+                    remaining = [s for s in high_value_signals if s.get("title") not in analyzed_titles]
+                    
+                    for signal in remaining:
+                        try:
+                            # Reuse the extraction logic or calling the function directly
+                            # ... (Original sequential logic) ...
+                             logger.info(f"Fallback Analyzing: {signal['title']}")
+                             res_dict, s_id, summ = analyze_single_signal(signal)
+                             if res_dict:
+                                 self.db.save_signal(res_dict)
+                                 analyzed_signals.append(res_dict)
+                                 if s_id:
+                                    self.db.update_news_content(s_id, analysis=summ)
+                        except Exception as seq_e:
+                             logger.error(f"Sequential fallback failed for {signal['title']}: {seq_e}")
+                    
+                    ckpt.save_json("analyzed_signals.json", analyzed_signals)
+
+            else:
+                # Sequential Mode (Legacy)
+                for signal in high_value_signals:
+                    logger.info(f"Analyzing: {signal['title']}")
+
+                    # 2. 构造上下文
+                    content = signal.get("content") or ""
+                    if len(content) < 50 and signal.get("url"):
+                        content = self.trend_agent.news_toolkit.fetch_news_content(signal["url"]) or ""
+                    input_text = f"【{signal['title']}】\n{content[:3000]}"
+
+                    try:
+                        # 调用 FinAgent 执行 ISQ 解析
+                        sig_obj = self.fin_agent.analyze_signal(input_text, news_id=signal.get("id"))
+
+                        if sig_obj:
+                            # 补充来源信息 (如果模型没填全)
+                            if not sig_obj.sources and signal.get("url"):
+                                sig_obj.sources = [{"title": signal["title"], "url": signal["url"], "source_name": signal.get("source", "Unknown")}]
+
+                            # 保存到深度信号表
+                            sig_dict = sig_obj.dict()
+                            if user_id:
+                                sig_dict['user_id'] = user_id
+                                if sig_dict.get('signal_id'):
+                                    sig_dict['signal_id'] = f"{sig_dict['signal_id']}_{user_id}"
+                            self.db.save_signal(sig_dict)
+                            analyzed_signals.append(sig_obj.dict())
+
+                            # 同步回 news 表（旧逻辑兼容）
+                            if signal.get("id"):
+                                self.db.update_news_content(signal["id"], analysis=sig_obj.summary)
+
+                            # Incremental checkpoint every success to enable resume
+                            if len(analyzed_signals) % 3 == 0:
+                                ckpt.save_json("analyzed_signals.json", analyzed_signals)
+                        else:
+                            logger.warning(f"Could not get structured analysis for {signal['title']}, skipping")
+                    except Exception as e:
+                        logger.error(f"Analysis failed for {signal['title']}: {e}")
+
+                ckpt.save_json("analyzed_signals.json", analyzed_signals)
 
         
         logger.info("--- Step 3: Report Generation ---")
@@ -667,6 +777,8 @@ if __name__ == "__main__":
     parser.add_argument("--checkpoint-dir", type=str, default="reports/checkpoints", help="Checkpoint base dir")
     parser.add_argument("--log-dir", type=str, default="logs", help="Log directory")
     parser.add_argument("--log-level", type=str, default="DEBUG", help="Log level (INFO/DEBUG/...) ")
+    parser.add_argument("--concurrency", type=int, default=1, help="Concurrency for signal analysis (default: 1)")
+    parser.add_argument("--update-from", type=str, default=None, help="Update an existing run (provide base run ID) to enable tracking analysis")
     
     args = parser.parse_args()
     
@@ -692,16 +804,26 @@ if __name__ == "__main__":
 
     workflow = SignalFluxWorkflow(isq_template_id=args.template)
     try:
-        workflow.run(
-            sources=sources,
-            wide=args.wide,
-            depth=depth,
-            query=args.query,
-            run_id=run_id,
-            resume=bool(args.resume),
-            resume_from=args.resume_from,
-            checkpoint_dir=args.checkpoint_dir,
-        )
+        if args.update_from:
+            logger.info(f"🔄 Executing Tracking Analysis based on Run: {args.update_from}")
+            workflow.update_run(
+                base_run_id=args.update_from,
+                checkpoint_dir=args.checkpoint_dir,
+                user_query=args.query,
+                new_run_id=run_id,
+            )
+        else:
+            workflow.run(
+                sources=sources,
+                wide=args.wide,
+                depth=depth,
+                query=args.query,
+                run_id=run_id,
+                resume=bool(args.resume),
+                resume_from=args.resume_from,
+                checkpoint_dir=args.checkpoint_dir,
+                concurrency=args.concurrency,
+            )
     except Exception as e:
         # Best-effort crash record
         try:
