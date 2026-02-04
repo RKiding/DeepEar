@@ -140,6 +140,35 @@ uv run src/main_flow.py
 系统将启动智能体工作流：识别意图 -> 抓取热点 -> 分析信号 -> 时序预测建模 -> 生成报告。
 生成的产物将保存在 `reports/` 目录下。
 
+#### 方式 3：作为 AI Agent Skill 使用
+DeepEar 可以作为一种专有技能（Skill）集成到各种 AI Agent 框架（如 Antigravity, OpenCode, Claude Code）中。对于单独的组件类技能（如新闻抓取、情绪分析等），可参考：[Awesome-finance-skills](https://github.com/RKiding/Awesome-finance-skills)。
+
+1. **安装 Skill**
+   将 `skills/deepear` 目录拷贝到你的 Agent 技能文件夹下：
+   ```bash
+   # 以 OpenCode/Claude Code 为例
+   mkdir -p ~/.config/opencode/skills/
+   cp -r skills/deepear ~/.config/opencode/skills/
+   ```
+
+2. **Skill 安装路径参考**
+  | 框架 | 作用域 | 安装路径 |
+  |:-----|:-------|:---------|
+  | **Antigravity** | 工作区 | `<workspace>/.agent/skills/<skill>/` |
+  | | 全局 | `~/.gemini/antigravity/global_skills/<skill>/` |
+  | **OpenCode** | 项目 | `.opencode/skills/<skill>/` 或 `.claude/skills/<skill>/` |
+  | | 全局 | `~/.config/opencode/skills/<skill>/` |
+  | **OpenClaw** | 工作区 | `<workspace>/skills`（优先级最高） |
+  | | 托管 | `~/.openclaw/skills` |
+  | **Claude Code / Codex** | 个人 | `~/.claude/skills/` 或 `~/.codex/skills/` |
+  | | 项目 | `.claude/skills/` |
+
+3. **启动 Skill 服务**
+   ```bash
+   uv run skills/deepear/scripts/server.py
+   ```
+   集成后，Agent 即可调用 `analyze` 工具触发 DeepEar 分析流程，并通过 `status` 工具查询结果。
+
 ---
 
 ## 🏗 系统架构

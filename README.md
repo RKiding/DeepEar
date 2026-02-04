@@ -137,7 +137,36 @@ uv run src/main_flow.py
 | `--update-from` | Update an existing run (provide base run ID) to track signal evolution | `None` |
 
 The system will start the agent workflow: identifying intent -> fetching trends -> analyzing signals -> predictive modeling -> generating reports. 
+
 Artifacts will be saved in the `reports/` directory.
+#### Option 3: Use as an AI Agent Skill
+DeepEar can be integrated into various AI agent frameworks (like Antigravity, OpenCode, Claude Code) as a specialized skill. For individual component skills (e.g., news fetchers, sentiment analyzers), please refer to [Awesome-finance-skills](https://github.com/RKiding/Awesome-finance-skills).
+
+1. **Install the Skill**
+   Copy the `skills/deepear` directory to your agent's skill folder:
+   ```bash
+   # Example for OpenCode/Claude Code
+   mkdir -p ~/.config/opencode/skills/
+   cp -r skills/deepear ~/.config/opencode/skills/
+   ```
+
+2. **Skill Installation Paths**
+  | Framework | Scope | Installation Path |
+  |:----------|:------|:------------------|
+  | **Antigravity** | Workspace | `<workspace>/.agent/skills/<skill>/` |
+  | | Global | `~/.gemini/antigravity/global_skills/<skill>/` |
+  | **OpenCode** | Project | `.opencode/skills/<skill>/` or `.claude/skills/<skill>/` |
+  | | Global | `~/.config/opencode/skills/<skill>/` |
+  | **OpenClaw** | Workspace | `<workspace>/skills` (highest priority) |
+  | | Managed | `~/.openclaw/skills` |
+  | **Claude Code / Codex** | Personal | `~/.claude/skills/` or `~/.codex/skills/` |
+  | | Project | `.claude/skills/` |
+
+3. **Start the Skill Server**
+   ```bash
+   uv run skills/deepear/scripts/server.py
+   ```
+   The agent can now use the `analyze` tool to trigger the DeepEar workflow and `status` to check results.
 
 ---
 
