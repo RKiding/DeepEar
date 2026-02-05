@@ -11,7 +11,7 @@
   <img src="assets/logo.svg" alt="DeepEar Logo" width="200">
   
   <p>
-    An open-source framework for Deep Research and Financial Signal Tracking.
+    An open-source Deep Research framework that transforms Public Opinion into actionable Investment Logic Chains with skills.
   </p>
 
   <!-- Badges -->
@@ -23,9 +23,16 @@
 
   <!-- 预留演示内容位置 -->
   <br/><br/>
-Click the preview below to see some generated sample reports:
+  <!-- 视频演示 -->
+  <br/>
+  <video src="https://github.com/RKiding/RKiding.github.io/raw/main/signalflux/deep%20ear%20demo.mp4" width="100%" controls autoplay loop muted></video>
+  <br/><br/>
 
-[![Report Preview](assets/report_preview.svg)](https://rkiding.github.io/signalflux/)
+  <!-- 缩小的报告预览 -->
+  <p>Click the preview below to see generated sample reports:</p>
+  <a href="https://rkiding.github.io/signalflux/">
+    <img src="assets/report_preview.svg" alt="Report Preview" width="400">
+  </a>
 
 </div>
 

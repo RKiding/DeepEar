@@ -11,7 +11,7 @@
   <img src="assets/logo.svg" alt="DeepEar Logo" width="200">
   
   <p>
-    一个用于深度研究与金融信号追踪的开源框架。
+    一个将全网舆情转化为投资逻辑传导链的开源深度研究框架，支持skill接入。
   </p>
 
   <!-- Badges -->
@@ -24,9 +24,16 @@
   <!-- 预留演示内容位置 -->
   <br/><br/>
   <!-- <img src="assets/demo.gif" alt="AlphaEar Demo" width="800"> -->
-  点击下方预览图查看生成的研报样例：
+  <!-- 视频演示 -->
+  <br/>
+  <video src="https://github.com/RKiding/RKiding.github.io/raw/main/signalflux/deep%20ear%20demo.mp4" width="100%" controls autoplay loop muted></video>
+  <br/><br/>
 
-[![报告预览](assets/report_preview.svg)](https://rkiding.github.io/signalflux/)
+  <!-- 缩小的报告预览 -->
+  <p>点击下方预览图查看生成的研报样例：</p>
+  <a href="https://rkiding.github.io/signalflux/">
+    <img src="assets/report_preview.svg" alt="报告预览" width="400">
+  </a>
 
 </div>
 
