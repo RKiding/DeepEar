@@ -50,7 +50,7 @@ export const LiteDashboard = () => {
     <div className="lite-page">
       <header className="lite-header">
         <div>
-          <div className="lite-title">AlphaEar Lite</div>
+          <div className="lite-title">DeepEar Lite</div>
           <div className="lite-subtitle">自动扫描 | 信号关联 | 新闻链接</div>
         </div>
         <div className="lite-meta">
