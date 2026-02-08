@@ -65,4 +65,6 @@ jobs:
 
       - name: Push changes
         if: success()
-        run: git push
+        run: |
+          git pull --rebase origin lite
+          git push
