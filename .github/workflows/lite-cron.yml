@@ -1,0 +1,54 @@
+name: DeepEar Lite Cron
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  generate-lite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run lite analysis
+        env:
+          REASONING_MODEL_PROVIDER: ${{ secrets.REASONING_MODEL_PROVIDER }}
+          REASONING_MODEL_ID: ${{ secrets.REASONING_MODEL_ID }}
+          REASONING_MODEL_HOST: ${{ secrets.REASONING_MODEL_HOST }}
+          TOOL_MODEL_PROVIDER: ${{ secrets.TOOL_MODEL_PROVIDER }}
+          TOOL_MODEL_ID: ${{ secrets.TOOL_MODEL_ID }}
+          TOOL_MODEL_HOST: ${{ secrets.TOOL_MODEL_HOST }}
+          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
+          LLM_MODEL: ${{ secrets.LLM_MODEL }}
+          LLM_HOST: ${{ secrets.LLM_HOST }}
+          JINA_API_KEY: ${{ secrets.JINA_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
+          ZAI_KEY_API: ${{ secrets.ZAI_KEY_API }}
+        run: uv run scripts/minisite_generate.py --run-llm --sources financial --depth auto --max-charts 6
+
+      - name: Commit latest.json
+        run: |
+          git config user.name "deepear-bot"
+          git config user.email "bot@deepear.local"
+          git add dashboard/frontend/public/latest.json dashboard/frontend/dist/latest.json
+          git diff --staged --quiet || git commit -m "chore: update lite data"
+
+      - name: Push changes
+        if: success()
+        run: git push

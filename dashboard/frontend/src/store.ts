@@ -23,6 +23,7 @@ export interface Signal {
     transmission_chain: Array<{ node_name: string; impact_type: string; logic: string }>
     reasoning: string
     sources?: Array<{ title: string; url: string; source_name: string }>
+    search_results?: Array<{ title: string; url: string; source?: string; source_name?: string }>
 }
 
 export interface ChartData {

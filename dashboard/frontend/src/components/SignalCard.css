@@ -96,6 +96,19 @@
     margin-bottom: 18px;
 }
 
+.isq-radar-wrapper {
+    background: var(--bg-primary, #0F172A);
+    border: 1px solid var(--border-primary, #334155);
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 16px;
+}
+
+.isq-radar {
+    width: 100%;
+    height: 160px;
+}
+
 .metric {
     display: flex;
     flex-direction: column;

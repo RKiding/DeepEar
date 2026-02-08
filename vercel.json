@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "cd dashboard/frontend && npm install && npm run build",
+  "outputDirectory": "dashboard/frontend/dist",
+  "cleanUrls": true,
+  "routes": [
+    { "src": "^/$", "dest": "/lite" },
+    { "handle": "filesystem" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}

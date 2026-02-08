@@ -1,0 +1,256 @@
+.lite-page {
+  min-height: 100vh;
+  padding: 32px 24px 48px;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  font-family: var(--font-body);
+}
+
+.lite-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-primary);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.lite-title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.lite-subtitle {
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.lite-meta {
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 13px;
+  display: grid;
+  gap: 4px;
+}
+
+.lite-error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.lite-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 40px 12px;
+}
+
+.lite-nav {
+  margin: 10px 0 20px;
+}
+
+.lite-chart-detail {
+  display: grid;
+  gap: 16px;
+}
+
+.lite-chart-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.lite-explain {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--text-secondary);
+}
+
+.lite-explain-text {
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.lite-related {
+  margin-top: 18px;
+}
+
+.lite-related-list {
+  display: grid;
+  gap: 12px;
+}
+
+.lite-related-item {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.lite-related-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.lite-related-links {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+
+.lite-list {
+  display: grid;
+  gap: 16px;
+}
+
+.lite-signal-block {
+  display: grid;
+  gap: 14px;
+}
+
+.lite-charts-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.lite-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 12px;
+}
+
+.lite-chart-item {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  padding: 6px;
+}
+
+.lite-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.lite-card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.lite-card-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.lite-card-time {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.lite-summary {
+  margin: 10px 0 14px;
+  color: var(--text-secondary);
+}
+
+.lite-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.lite-tag {
+  background: rgba(139, 92, 246, 0.12);
+  color: #c4b5fd;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.lite-tag-secondary {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+}
+
+.lite-metrics {
+  display: flex;
+  gap: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+}
+
+.lite-section-title {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.lite-prediction {
+  margin-bottom: 12px;
+}
+
+.lite-prediction-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.lite-chain {
+  margin-bottom: 12px;
+}
+
+.lite-chain ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.lite-chain li {
+  margin-bottom: 6px;
+}
+
+.lite-links {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .lite-page {
+    padding: 20px 14px 32px;
+  }
+
+  .lite-header {
+    align-items: flex-start;
+  }
+
+  .lite-meta {
+    text-align: left;
+  }
+
+  .lite-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

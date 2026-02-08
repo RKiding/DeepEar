@@ -222,6 +222,32 @@ class FinAgent:
             sanitized.append(new_item)
 
         json_data['impact_tickers'] = sanitized
+
+        # Sanitize ISQ values to avoid NaN/None/out-of-range
+        def to_float(value: object, default: float) -> float:
+            try:
+                v = float(value)
+                if v != v:  # NaN check
+                    return default
+                return v
+            except Exception:
+                return default
+
+        def clamp(v: float, min_v: float, max_v: float) -> float:
+            return max(min(v, max_v), min_v)
+
+        json_data['sentiment_score'] = clamp(to_float(json_data.get('sentiment_score'), 0.0), -1.0, 1.0)
+        json_data['confidence'] = clamp(to_float(json_data.get('confidence'), 0.5), 0.0, 1.0)
+
+        intensity_raw = json_data.get('intensity', 3)
+        try:
+            intensity_val = int(float(intensity_raw))
+        except Exception:
+            intensity_val = 3
+        json_data['intensity'] = max(1, min(intensity_val, 5))
+
+        json_data['expectation_gap'] = clamp(to_float(json_data.get('expectation_gap'), 0.5), 0.0, 1.0)
+        json_data['timeliness'] = clamp(to_float(json_data.get('timeliness'), 0.8), 0.0, 1.0)
         return json_data
 
     def track_signal(self, old_signal: dict, max_retries: int = 3) -> Optional[InvestmentSignal]:
