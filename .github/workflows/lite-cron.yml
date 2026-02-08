@@ -2,12 +2,15 @@ name: DeepEar Lite Cron
 
 on:
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 */1 * * *'
   workflow_dispatch: {}
 
 jobs:
   generate-lite:
     runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Shanghai
+      STOCK_DB_PATH: data/lite_stock.db
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,6 +22,14 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v3
+
+      - name: Restore DB cache
+        uses: actions/cache@v4
+        with:
+          path: data/lite_stock.db
+          key: lite-db-${{ runner.os }}
+          restore-keys: |
+            lite-db-${{ runner.os }}
 
       - name: Sync dependencies
         run: uv sync
@@ -40,15 +51,22 @@ jobs:
           DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           DASHSCOPE_API_KEY: ${{ secrets.DASHSCOPE_API_KEY }}
           ZAI_KEY_API: ${{ secrets.ZAI_KEY_API }}
-        run: uv run scripts/minisite_generate.py --run-llm --sources financial --depth auto --max-charts 6
+        run: uv run scripts/minisite_generate.py --run-llm --sources financial --depth auto --max-charts 6 --db-path "$STOCK_DB_PATH"
 
       - name: Commit latest.json
         run: |
           git config user.name "deepear-bot"
           git config user.email "bot@deepear.local"
-          git add dashboard/frontend/public/latest.json dashboard/frontend/dist/latest.json
+          git add dashboard/frontend/public/latest.json
+          if [ -f dashboard/frontend/dist/latest.json ]; then
+            git add dashboard/frontend/dist/latest.json
+          fi
           git diff --staged --quiet || git commit -m "chore: update lite data"
 
       - name: Push changes
         if: success()
-        run: git push
+        run: |
+          git stash --include-untracked
+          git pull --rebase origin lite
+          git stash pop || true
+          git push

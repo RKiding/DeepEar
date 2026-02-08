@@ -13,7 +13,8 @@ class IntentAgent:
             model=model,
             instructions=[get_intent_analysis_instructions()],
             markdown=False,
-            output_schema=IntentAnalysis if hasattr(model, 'response_format') else None
+            output_schema=IntentAnalysis if hasattr(model, 'response_format') else None,
+            tool_call_limit=3
         )
         logger.info("🧠 IntentAgent initialized")
 

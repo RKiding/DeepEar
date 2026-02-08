@@ -1,0 +1,146 @@
+{
+  "generated_at": "2026-02-08T18:00:23.700596+08:00",
+  "run_id": "lite_20260208_180023",
+  "count": 2,
+  "signals": [
+    {
+      "signal_id": "2283925",
+      "title": "杉杉股份重整落定，国资入主预期差巨大",
+      "summary": "杉杉股份(600884)与皖维集团签署重整投资协议，若成功控制权将变更为安徽省国资委。当前股价已涨停（+10.03%），反映市场对重组落地的初步定价，但尚未充分定价国资入主后的长期估值修复空间。参考同类型重整案例（如ST众泰），重整完成后股价通常存在20%-50%的补涨空间，建议关注。",
+      "reasoning": "",
+      "transmission_chain": [
+        {
+          "node_name": "重组投资人",
+          "impact_type": "利好",
+          "logic": "安徽皖维集团作为省属国企入主，为杉杉股份提供信用背书，缓解流动性危机，修复资产负债表。"
+        },
+        {
+          "node_name": "控制权变更",
+          "impact_type": "利好",
+          "logic": "实际控制人变更为安徽省国资委，公司治理结构优化，获得政策资源倾斜，消除原大股东股权质押风险。"
+        },
+        {
+          "node_name": "资本运作预期",
+          "impact_type": "利好",
+          "logic": "国资背景有助于后续资产注入或产业整合，打开市值管理空间，提升估值中枢。"
+        }
+      ],
+      "sentiment_score": 0.0,
+      "confidence": 0.5,
+      "intensity": 3,
+      "expectation_gap": 0.5,
+      "timeliness": 0.8,
+      "expected_horizon": "T+N",
+      "price_in_status": "未知",
+      "impact_tickers": [],
+      "industry_tags": [],
+      "sources": [
+        {
+          "title": "杉杉股份：若重整成功 公司实际控制人将变更为安徽省国资委",
+          "url": "https://www.cls.cn/detail/2283925",
+          "source_name": "cls"
+        }
+      ],
+      "search_results": [
+        {
+          "title": "杉杉重整悬了？三大死结难破，黄掉概率越来越大",
+          "url": "https://finance.sina.com.cn/roll/2025-11-28/doc-infyyany9789155.shtml",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "杉杉集团重整计划搁浅，任元林的\"小算盘\"落空了_腾讯新闻",
+          "url": "https://news.qq.com/rain/a/20251105A01F7G00",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "\"民营船王\"重整杉杉集团计划草案被否 知情人士：多方利益诉求难以调和，不排除重新遴选的可能 | 每经网",
+          "url": "https://www.nbd.com.cn/articles/2025-11-04/4128697.html",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "杉杉破产重整方案公布，民营船王任元林入主尚须过两道坎 10月11日傍晚，杉杉股份公司披露的重整公告，像一枚重磅炸弹，投向了长期被视作\"杉杉系 ...",
+          "url": "https://xueqiu.com/7114816284/356162969",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "三重确定性利好落地!杉杉股份开启价值重估新征程从控股股东重整尘埃落定到技术壁垒持_财富号_东方财富网",
+          "url": "https://caifuhao.eastmoney.com/news/20251015224323032125710",
+          "source": "Search (ddg)"
+        }
+      ]
+    },
+    {
+      "signal_id": "2283924",
+      "title": "天成自控获23亿座椅定点，业绩预期显著提升",
+      "summary": "基于当前股价（11.58元），该信号属于重大利好。预期公司2026-2028年将进入业绩释放期，23亿元订单有望重塑市场对其成长性的估值逻辑。建议目标价区间在13.5-15.2元，对应涨幅约16%-31%。",
+      "reasoning": "1. **事件定性**：天成自控全资子公司武汉天成获得头部车企23亿元平台型座椅定点，生命周期5年，预计2026年10月量产。这是公司继2025年7月和11月获得定点后的第三次重大定点，验证了技术实力。\n2. **定价状态分析**：当前股价11.58元，处于2025年1月30日以来的下跌趋势中（本月最高12.43元，最低11.34元）。23亿元的订单金额占公司2025年中期营收（11.56亿元）的近两倍，对业绩拉动显著，但市场对此类远期订单（2026年落地）往往定价谨慎，存在预期差。\n3. **逻辑推演**：平台型项目（三款车型）意味着规模效应，能摊薄研发与固定成本。虽然公告提示2026年业绩影响有限，但中长期看，该订单将打开成长空间。结合当前市场情绪（-0.5至0），该利好信号足以扭转短期颓势。\n4. **结论**：信号强度4级（强），预期差0.4（部分认知）。基于营收增厚模型测算，若23亿订单顺利执行，将显著提升估值水平。",
+      "transmission_chain": [
+        {
+          "node_name": "上游原材料",
+          "impact_type": "中性",
+          "logic": "短期对上游（钢铝、皮革）需求拉动有限，23亿订单主要在2027-2028年释放，当前供需关系不变。"
+        },
+        {
+          "node_name": "中游制造",
+          "impact_type": "利好",
+          "logic": "公司获得头部车企23亿元平台型座椅定点，含三款车型，将显著增厚未来三年营收与净利润，产能利用率预期提升。"
+        },
+        {
+          "node_name": "下游整车",
+          "impact_type": "中性",
+          "logic": "利好下游头部车企供应链稳定性，但该订单为2026年量产，短期内对整车厂业绩无直接影响。"
+        }
+      ],
+      "sentiment_score": 0.0,
+      "confidence": 0.5,
+      "intensity": 3,
+      "expectation_gap": 0.5,
+      "timeliness": 0.8,
+      "expected_horizon": "T+N",
+      "price_in_status": "未知",
+      "impact_tickers": [
+        {
+          "ticker": "603085",
+          "name": "天成自控",
+          "weight": 1.0
+        }
+      ],
+      "industry_tags": [],
+      "sources": [
+        {
+          "title": "天成自控：子公司武汉天成收到国内头部某汽车企业乘用车座椅定点通知",
+          "url": "https://www.cls.cn/detail/2283924",
+          "source_name": "cls"
+        }
+      ],
+      "search_results": [
+        {
+          "title": "天成自控子公司获国内头部车企23亿元座椅项目定点",
+          "url": "https://finance.sina.com.cn/stock/aigc/zdht/2026-02-08/doc-inhmayqf0186559.shtml",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "获国内头部车企乘用车座椅总成项目定点 天成自控乘用车座椅业务再下一城_腾讯新闻",
+          "url": "https://news.qq.com/rain/a/20250604A088X900",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "天成自控：子公司武汉天成收到国内头部某汽车企业乘用车座椅定点通知",
+          "url": "https://www.msn.cn/zh-cn/autos/通用/天成自控-子公司武汉天成收到国内头部某汽车企业乘用车座椅定点通知/ar-AA1VUE96",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "天成自控年内多次获乘用车座椅相关项目定点 _ 东方财富网",
+          "url": "https://wap.eastmoney.com/a/202509233520185624.html",
+          "source": "Search (ddg)"
+        },
+        {
+          "title": "天成自控获国内头部车企 座椅总成项目定点 - stcn.com",
+          "url": "https://www.stcn.com/article/detail/1858025.html",
+          "source": "Search (ddg)"
+        }
+      ]
+    }
+  ],
+  "charts": {}
+}

@@ -609,7 +609,7 @@ async def suggest_queries(request: dict):
             llm = get_model(provider, model_id, host=host)
         else:
             llm = get_model(provider, model_id)
-        agent = Agent(model=llm, markdown=False)
+        agent = Agent(model=llm, markdown=False, tool_call_limit=3)
         
         prompt = f"""你是一位金融分析专家。基于以下新闻标题，生成 10 个不同角度的分析查询（Query）。
 这些 Query 将用于驱动金融信号分析系统，需要覆盖不同的分析维度。

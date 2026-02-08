@@ -64,16 +64,22 @@ class KronosPredictorUtility:
                 model = Kronos.from_pretrained("NeoQuasar/Kronos-base")
             
             # 3. Load Trained News Projector Weights
-            # Check exports/models directory
+            # Check explicit model path first, otherwise fallback to latest in exports/models
             PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
             models_dir = os.path.join(PROJECT_ROOT, "exports/models")
+            explicit_model = os.getenv("KRONOS_NEWS_MODEL_PATH", "").strip()
             model_files = glob.glob(os.path.join(models_dir, "*.pt"))
-            
-            if model_files:
-                latest_model = max(model_files, key=os.path.getctime)
-                logger.info(f"🔄 Loading trained news weights from {latest_model}...")
+
+            selected_model = None
+            if explicit_model and os.path.exists(explicit_model):
+                selected_model = explicit_model
+            elif model_files:
+                selected_model = max(model_files, key=os.path.getctime)
+
+            if selected_model:
+                logger.info(f"🔄 Loading trained news weights from {selected_model}...")
                 try:
-                    checkpoint = torch.load(latest_model, map_location=device)
+                    checkpoint = torch.load(selected_model, map_location=device)
                     # The checkpoint contains 'news_proj_state_dict'
                     if 'news_proj_state_dict' in checkpoint:
                         # Ensure model has news_proj initialized with correct dim if needed (usually handled by config but good to be safe)

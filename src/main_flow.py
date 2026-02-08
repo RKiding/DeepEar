@@ -53,7 +53,7 @@ class SignalFluxWorkflow:
         self.search_tools = SearchTools(self.db)
         
         # 用于筛选的轻量 Agent（不带工具），使用推理模型
-        self.filter_agent = Agent(model=self.reasoning_model, markdown=False, debug_mode=True)
+        self.filter_agent = Agent(model=self.reasoning_model, markdown=False, debug_mode=True, tool_call_limit=3)
         
         logger.info(f"🚀 DeepEar Workflow initialized with Dual-Model Routing (ISQ Template: {self.isq_template_id})")
     

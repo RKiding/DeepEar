@@ -27,7 +27,8 @@ class ForecastAgent:
             model=self.model,
             instructions=["你是一个专业的 K 线趋势修正专家。"],
             markdown=False,
-            debug_mode=True
+            debug_mode=True,
+            tool_call_limit=3
         )
 
     def generate_forecast(
