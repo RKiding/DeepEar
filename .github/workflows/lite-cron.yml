@@ -8,6 +8,8 @@ on:
 jobs:
   generate-lite:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     env:
       TZ: Asia/Shanghai
       STOCK_DB_PATH: data/lite_stock.db
@@ -67,6 +69,6 @@ jobs:
         if: success()
         run: |
           git stash --include-untracked
-          git pull --rebase origin lite
+          git pull --rebase origin main
           git stash pop || true
           git push
