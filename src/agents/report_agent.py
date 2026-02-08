@@ -58,7 +58,8 @@ class ReportAgent:
             instructions=[get_report_planner_base_instructions()],
             markdown=False,
             debug_mode=True,
-            output_schema=ClusterContext if hasattr(self.tool_model, 'response_format') else None
+            output_schema=ClusterContext if hasattr(self.tool_model, 'response_format') else None,
+            tool_call_limit=3
         )
         
         # 2. Writer Agent
@@ -66,7 +67,8 @@ class ReportAgent:
             model=model,
             instructions=[get_report_writer_base_instructions()],
             markdown=False,
-            debug_mode=True
+            debug_mode=True,
+            tool_call_limit=3
         )
         
         # 3. Editor Agent
@@ -75,7 +77,8 @@ class ReportAgent:
             tools=[self.rag.search],
             instructions=[get_report_editor_base_instructions()],
             markdown=False,
-            debug_mode=True
+            debug_mode=True,
+            tool_call_limit=3
         )
         
         # 5. Section Editor Agent (用于增量编辑)
@@ -84,7 +87,8 @@ class ReportAgent:
             tools=[self.rag.search],
             instructions=[get_report_editor_base_instructions()],
             markdown=False,
-            debug_mode=True
+            debug_mode=True,
+            tool_call_limit=3
         )
         
         # 6. Forecast Agent (lazy init: avoid heavy Kronos load unless actually requested)
@@ -1508,7 +1512,8 @@ class ReportAgent:
                                 visualizer_agent = Agent(
                                     model=self.tool_model,
                                     instructions=[get_drawio_system_prompt()],
-                                    markdown=False
+                                    markdown=False,
+                                    tool_call_limit=3
                                 )
                                 
                                 logger.info(f"🎨 Generating Draw.io XML for '{title}' (attempt {attempt + 1}/{max_retries})...")

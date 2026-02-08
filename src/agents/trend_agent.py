@@ -64,14 +64,16 @@ class TrendAgent:
             ],
             instructions=[get_trend_scanner_instructions()],
             markdown=False,
-            output_schema=ScanContext if hasattr(self.tool_model, 'response_format') else None
+            output_schema=ScanContext if hasattr(self.tool_model, 'response_format') else None,
+            tool_call_limit=3
         )
 
         # 2. 评估员 Agent (负责对扫描到的数据进行价值判断)
         self.evaluator = Agent(
             model=self.model,
             instructions=[get_trend_evaluator_instructions()],
-            markdown=False
+            markdown=False,
+            tool_call_limit=3
         )
 
     def run(self, task_description: str = "分析当前全网热点，找出最有价值的金融信号"):

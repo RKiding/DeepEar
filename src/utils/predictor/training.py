@@ -70,7 +70,7 @@ class AutoSynthesisTrainer:
         # LLM for causality verification
         provider = os.getenv("LLM_PROVIDER", "ust")
         model_id = os.getenv("LLM_MODEL", "Qwen")
-        self.llm_agent = Agent(model=get_model(provider, model_id))
+        self.llm_agent = Agent(model=get_model(provider, model_id), tool_call_limit=3)
 
     def discover_shocks(self, ticker_list, threshold=2.0, limit_per_stock=5, days=365, pred_len=5):
         """1. Find days with significant price movements (Look back 1 year)"""

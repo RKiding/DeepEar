@@ -48,7 +48,8 @@ class FinAgent:
             instructions=[get_fin_researcher_instructions()],
             markdown=False,
             debug_mode=True,
-            output_schema=ResearchContext if hasattr(self.tool_model, 'response_format') else None
+            output_schema=ResearchContext if hasattr(self.tool_model, 'response_format') else None,
+            tool_call_limit=3
         )
 
         # 2. 分析师 Agent (负责深度逻辑推理和 JSON 输出)
@@ -57,7 +58,8 @@ class FinAgent:
             instructions=[get_fin_analyst_instructions(template_id=self.isq_template_id)],
             markdown=False,
             debug_mode=True,
-            output_schema=InvestmentSignal if hasattr(self.model, 'response_format') else None
+            output_schema=InvestmentSignal if hasattr(self.model, 'response_format') else None,
+            tool_call_limit=3
         )
         
         logger.info(f"💼 FinAgent initialized (Dual-Model: Reasoning={self.model.id}, Tool={self.tool_model.id}, ISQ={self.isq_template_id})")

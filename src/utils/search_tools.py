@@ -571,7 +571,7 @@ class SearchTools:
             else:
                 model = get_model(provider, model_id)
                 
-            agent = Agent(model=model, markdown=False)
+            agent = Agent(model=model, markdown=False, tool_call_limit=3)
             
             response = agent.run(prompt)
             content = response.content

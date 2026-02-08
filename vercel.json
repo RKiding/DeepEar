@@ -6,6 +6,7 @@
     { "source": "/", "destination": "/lite", "permanent": false }
   ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/lite", "destination": "/index.html" },
+    { "source": "/lite/(.*)", "destination": "/index.html" }
   ]
 }

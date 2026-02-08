@@ -108,7 +108,7 @@ def _llm_filter_signals(news_list: List[Dict[str, Any]], depth: Union[int, str],
     ])
 
     filter_instruction = get_news_filter_instructions(len(news_list), depth, query)
-    filter_agent = Agent(model=reasoning_model, markdown=False, debug_mode=True)
+    filter_agent = Agent(model=reasoning_model, markdown=False, debug_mode=True, tool_call_limit=3)
     filter_agent.instructions = [filter_instruction]
 
     response = filter_agent.run(f"请筛选以下新闻:\n{news_text}")
@@ -220,11 +220,18 @@ def run_lite_analysis(
         analyzed_signals: List[Dict[str, Any]] = []
         charts: Dict[str, Any] = {}
         charted = 0
+        content_cache: Dict[str, str] = {}
+        search_cache: Dict[str, List[Dict[str, Any]]] = {}
 
         for signal in high_value_signals:
             content = signal.get("content") or ""
-            if len(content) < 50 and signal.get("url"):
-                content = trend_agent.news_toolkit.fetch_news_content(signal["url"]) or ""
+            signal_url = signal.get("url")
+            if len(content) < 50 and signal_url:
+                cached = content_cache.get(signal_url)
+                if cached is None:
+                    cached = trend_agent.news_toolkit.fetch_news_content(signal_url) or ""
+                    content_cache[signal_url] = cached
+                content = cached
             input_text = f"【{signal.get('title', '')}】\n{content[:3000]}"
 
             sig_obj = fin_agent.analyze_signal(input_text, news_id=signal.get("id"))
@@ -247,16 +254,21 @@ def run_lite_analysis(
             try:
                 query_text = sig_dict.get("title") or sig_dict.get("summary") or signal.get("title")
                 if query_text:
-                    results = search_tools.search_list(str(query_text), max_results=5, enrich=False)
-                    sig_dict["search_results"] = [
-                        {
-                            "title": r.get("title"),
-                            "url": r.get("url"),
-                            "source": r.get("source")
-                        }
-                        for r in results
-                        if r.get("url")
-                    ]
+                    cache_key = str(query_text).strip()
+                    cached_results = search_cache.get(cache_key)
+                    if cached_results is None:
+                        results = search_tools.search_list(cache_key, max_results=5, enrich=False)
+                        cached_results = [
+                            {
+                                "title": r.get("title"),
+                                "url": r.get("url"),
+                                "source": r.get("source")
+                            }
+                            for r in results
+                            if r.get("url")
+                        ]
+                        search_cache[cache_key] = cached_results
+                    sig_dict["search_results"] = cached_results
             except Exception:
                 sig_dict["search_results"] = []
 

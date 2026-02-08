@@ -17,7 +17,8 @@ def test_tool_call_support(model: Model) -> bool:
     test_agent = Agent(
         model=model,
         tools=[get_current_weather],
-        instructions="请调用工具查询北京的天气，并直接返回工具的输出结果。"
+        instructions="请调用工具查询北京的天气，并直接返回工具的输出结果。",
+        tool_call_limit=3
     )
 
     try:
